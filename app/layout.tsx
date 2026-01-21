@@ -17,6 +17,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru">
+      <head>
+        <meta name="base:app_id" content="6971069c5f24b57cc50d333c" />
+      </head>
       <body>
         <BaseVerification />
         {children}
