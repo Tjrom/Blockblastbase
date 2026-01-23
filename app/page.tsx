@@ -5,24 +5,35 @@ import './game.css'
 
 const BOARD_SIZE = 8
 
-// Различные формы блоков для размещения
+// Более точные формы блоков как в Block Blast
 const BLOCK_SHAPES = [
-  // Одиночные блоки
+  // Маленькие блоки
   [[1]],
-  // Двойные блоки
   [[1, 1]],
   [[1], [1]],
-  // Тройные блоки
   [[1, 1, 1]],
   [[1], [1], [1]],
+  // L-образные
+  [[1, 0], [1, 1]],
+  [[0, 1], [1, 1]],
   [[1, 1], [1, 0]],
   [[1, 1], [0, 1]],
-  [[0, 1], [1, 1]],
-  [[1, 0], [1, 1]],
-  // Четверные блоки
+  // Квадраты
+  [[1, 1], [1, 1]],
+  // Прямые
   [[1, 1, 1, 1]],
   [[1], [1], [1], [1]],
-  [[1, 1], [1, 1]],
+  // T-образные
+  [[1, 1, 1], [0, 1, 0]],
+  [[0, 1, 0], [1, 1, 1]],
+  [[1, 0], [1, 1], [1, 0]],
+  [[0, 1], [1, 1], [0, 1]],
+  // Z-образные
+  [[1, 1, 0], [0, 1, 1]],
+  [[0, 1, 1], [1, 1, 0]],
+  [[1, 0], [1, 1], [0, 1]],
+  [[0, 1], [1, 1], [1, 0]],
+  // Большие блоки
   [[1, 1, 1], [1, 0, 0]],
   [[1, 1, 1], [0, 0, 1]],
   [[1, 0, 0], [1, 1, 1]],
@@ -31,26 +42,22 @@ const BLOCK_SHAPES = [
   [[1, 1], [0, 1], [0, 1]],
   [[1, 0], [1, 0], [1, 1]],
   [[0, 1], [0, 1], [1, 1]],
-  // Пятерные блоки
+  // Пятерные
   [[1, 1, 1, 1, 1]],
   [[1], [1], [1], [1], [1]],
   [[1, 1, 1], [1, 1, 0]],
   [[1, 1, 1], [0, 1, 1]],
-  [[1, 1, 0], [1, 1, 1]],
-  [[0, 1, 1], [1, 1, 1]],
-  [[1, 1, 1], [1, 0, 1]],
-  [[1, 0, 1], [1, 1, 1]],
 ]
 
 const COLORS = [
-  '#00ffff', // Cyan
-  '#ffff00', // Yellow
-  '#ff00ff', // Magenta
-  '#00ff00', // Green
-  '#ff0000', // Red
-  '#ff8800', // Orange
-  '#0000ff', // Blue
-  '#ff00ff', // Pink
+  '#FF6B6B', // Красный
+  '#4ECDC4', // Бирюзовый
+  '#45B7D1', // Синий
+  '#FFA07A', // Лососевый
+  '#98D8C8', // Мятный
+  '#F7DC6F', // Желтый
+  '#BB8FCE', // Фиолетовый
+  '#85C1E2', // Голубой
 ]
 
 type Cell = string | null
@@ -64,8 +71,9 @@ export default function Home() {
   const [lines, setLines] = useState(0)
   const [gameOver, setGameOver] = useState(false)
   const [gameStarted, setGameStarted] = useState(false)
-  const [selectedBlock, setSelectedBlock] = useState<{ block: Block; index: number } | null>(null)
+  const [selectedBlock, setSelectedBlock] = useState<{ block: Block; index: number; color: string } | null>(null)
   const [previewPosition, setPreviewPosition] = useState<{ row: number; col: number } | null>(null)
+  const [combo, setCombo] = useState(0)
 
   // Инициализация пустой доски
   const initBoard = useCallback((): Board => {
@@ -94,6 +102,7 @@ export default function Home() {
     setGameStarted(true)
     setSelectedBlock(null)
     setPreviewPosition(null)
+    setCombo(0)
   }, [initBoard, getRandomBlocks])
 
   // Проверка, можно ли разместить блок
@@ -133,7 +142,7 @@ export default function Home() {
   }, [])
 
   // Удалить заполненные линии и столбцы
-  const clearLines = useCallback((board: Board): { newBoard: Board; cleared: number } => {
+  const clearLines = useCallback((board: Board): { newBoard: Board; cleared: number; combo: number } => {
     let newBoard = board.map(row => [...row])
     let cleared = 0
     const rowsToClear: number[] = []
@@ -174,23 +183,30 @@ export default function Home() {
       cleared++
     }
     
-    return { newBoard, cleared }
+    // Комбо: если очищено больше 1 линии - бонус
+    const comboMultiplier = cleared > 1 ? cleared : 1
+    
+    return { newBoard, cleared, combo: comboMultiplier }
   }, [])
 
   // Обработка клика по доске
   const handleBoardClick = useCallback((row: number, col: number) => {
     if (!selectedBlock || gameOver || !gameStarted) return
 
-    const { block } = selectedBlock
+    const { block, color } = selectedBlock
     
     if (canPlaceBlock(block, row, col, board)) {
-      const color = COLORS[Math.floor(Math.random() * COLORS.length)]
       const newBoard = placeBlock(block, row, col, color, board)
-      const { newBoard: clearedBoard, cleared } = clearLines(newBoard)
+      const { newBoard: clearedBoard, cleared, combo: comboMultiplier } = clearLines(newBoard)
       
       if (cleared > 0) {
+        const points = cleared * 10 * comboMultiplier
         setLines(prev => prev + cleared)
-        setScore(prev => prev + cleared * 10)
+        setScore(prev => prev + points)
+        setCombo(comboMultiplier > 1 ? comboMultiplier : 0)
+        
+        // Сброс комбо через 2 секунды
+        setTimeout(() => setCombo(0), 2000)
       }
       
       // Удаляем использованный блок и добавляем новый
@@ -245,7 +261,8 @@ export default function Home() {
   // Выбор блока
   const handleBlockSelect = useCallback((block: Block, index: number) => {
     if (gameOver || !gameStarted) return
-    setSelectedBlock({ block, index })
+    const color = COLORS[index % COLORS.length]
+    setSelectedBlock({ block, index, color })
   }, [gameOver, gameStarted])
 
   // Инициализация при загрузке
@@ -260,7 +277,7 @@ export default function Home() {
     
     // Добавляем превью блока
     if (selectedBlock && previewPosition) {
-      const { block } = selectedBlock
+      const { block, color } = selectedBlock
       const { row, col } = previewPosition
       
       for (let r = 0; r < block.length; r++) {
@@ -269,7 +286,7 @@ export default function Home() {
             const boardRow = row + r
             const boardCol = col + c
             if (boardRow >= 0 && boardRow < BOARD_SIZE && boardCol >= 0 && boardCol < BOARD_SIZE) {
-              displayBoard[boardRow][boardCol] = 'preview'
+              displayBoard[boardRow][boardCol] = `preview-${color}`
             }
           }
         }
@@ -285,7 +302,7 @@ export default function Home() {
     <div className="game-container">
       <div className="game-header">
         <h1 className="game-title">🎮 BLOCK BLAST</h1>
-        <p className="game-subtitle">RETRO ARCADE PUZZLE</p>
+        <p className="game-subtitle">CLASSIC PUZZLE GAME</p>
       </div>
 
       <div className="game-wrapper">
@@ -299,6 +316,12 @@ export default function Home() {
               <div className="stat-label">LINES</div>
               <div className="stat-value">{lines}</div>
             </div>
+            {combo > 1 && (
+              <div className="stat-item">
+                <div className="stat-label">COMBO</div>
+                <div className="stat-value combo-text">x{combo}</div>
+              </div>
+            )}
           </div>
 
           <div className="game-controls">
@@ -316,25 +339,28 @@ export default function Home() {
           <div className="next-blocks">
             <div className="instruction-title">NEXT BLOCKS</div>
             <div className="blocks-container">
-              {nextBlocks.map((block, index) => (
-                <div
-                  key={index}
-                  className={`block-preview ${selectedBlock?.index === index ? 'selected' : ''}`}
-                  onClick={() => handleBlockSelect(block, index)}
-                >
-                  {block.map((row, rowIndex) => (
-                    <div key={rowIndex} className="block-row">
-                      {row.map((cell, colIndex) => (
-                        <div
-                          key={colIndex}
-                          className={`block-cell ${cell ? 'filled' : ''}`}
-                          style={cell ? { backgroundColor: COLORS[index % COLORS.length] } : {}}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              ))}
+              {nextBlocks.map((block, index) => {
+                const blockColor = COLORS[index % COLORS.length]
+                return (
+                  <div
+                    key={index}
+                    className={`block-preview ${selectedBlock?.index === index ? 'selected' : ''}`}
+                    onClick={() => handleBlockSelect(block, index)}
+                  >
+                    {block.map((row, rowIndex) => (
+                      <div key={rowIndex} className="block-row">
+                        {row.map((cell, colIndex) => (
+                          <div
+                            key={colIndex}
+                            className={`block-cell ${cell ? 'filled' : ''}`}
+                            style={cell ? { backgroundColor: blockColor } : {}}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
             </div>
           </div>
 
@@ -360,15 +386,25 @@ export default function Home() {
           <div className="game-board">
             {displayBoard.map((row, rowIndex) => (
               <div key={rowIndex} className="board-row">
-                {row.map((cell, colIndex) => (
-                  <div
-                    key={`${rowIndex}-${colIndex}`}
-                    className={`board-cell ${cell ? (cell === 'preview' ? 'preview' : 'filled') : ''}`}
-                    style={cell && cell !== 'preview' ? { backgroundColor: String(cell) } : {}}
-                    onClick={() => handleBoardClick(rowIndex, colIndex)}
-                    onMouseEnter={() => handleBoardHover(rowIndex, colIndex)}
-                  />
-                ))}
+                {row.map((cell, colIndex) => {
+                  const isPreview = cell ? cell.startsWith('preview-') : false
+                  const previewColor = isPreview && cell ? cell.replace('preview-', '') : null
+                  return (
+                    <div
+                      key={`${rowIndex}-${colIndex}`}
+                      className={`board-cell ${cell && !isPreview ? 'filled' : ''} ${isPreview ? 'preview' : ''}`}
+                      style={
+                        cell && !isPreview
+                          ? { backgroundColor: String(cell) }
+                          : isPreview && previewColor
+                          ? { backgroundColor: previewColor, opacity: 0.5 }
+                          : {}
+                      }
+                      onClick={() => handleBoardClick(rowIndex, colIndex)}
+                      onMouseEnter={() => handleBoardHover(rowIndex, colIndex)}
+                    />
+                  )
+                })}
               </div>
             ))}
           </div>

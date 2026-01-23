@@ -143,6 +143,23 @@ body {
     0 0 10px #ffff00;
 }
 
+.combo-text {
+  color: #ff00ff !important;
+  text-shadow: 
+    0 0 10px #ff00ff,
+    0 0 20px #ff00ff !important;
+  animation: comboPulse 0.5s infinite;
+}
+
+@keyframes comboPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
 .game-controls {
   display: flex;
   flex-direction: column;
