@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useMemo, useState } from 'react'
+import { BrowserProvider, Contract, JsonRpcProvider } from 'ethers'
 import './game.css'
+import { BLOCKBLAST_LEADERBOARD_ABI } from '../lib/leaderboardAbi'
 
 const BOARD_SIZE = 8
 
@@ -74,6 +76,26 @@ export default function Home() {
   const [selectedBlock, setSelectedBlock] = useState<{ block: Block; index: number; color: string } | null>(null)
   const [previewPosition, setPreviewPosition] = useState<{ row: number; col: number } | null>(null)
   const [combo, setCombo] = useState(0)
+  const [account, setAccount] = useState<string | null>(null)
+  const [chainId, setChainId] = useState<number | null>(null)
+  const [leaderboard, setLeaderboard] = useState<{ player: string; score: number }[]>([])
+  const [bestOnChain, setBestOnChain] = useState<number | null>(null)
+  const [contractAddress, setContractAddress] = useState<string>(
+    process.env.NEXT_PUBLIC_LEADERBOARD_ADDRESS || ''
+  )
+  const [txStatus, setTxStatus] = useState<string | null>(null)
+
+  const baseSepoliaChainId = 84532
+  const readProvider = useMemo(() => new JsonRpcProvider('https://sepolia.base.org'), [])
+
+  const readContract = useMemo(() => {
+    if (!contractAddress) return null
+    try {
+      return new Contract(contractAddress, BLOCKBLAST_LEADERBOARD_ABI, readProvider)
+    } catch {
+      return null
+    }
+  }, [contractAddress, readProvider])
 
   // Инициализация пустой доски
   const initBoard = useCallback((): Board => {
@@ -104,6 +126,106 @@ export default function Home() {
     setPreviewPosition(null)
     setCombo(0)
   }, [initBoard, getRandomBlocks])
+
+  const refreshOnChain = useCallback(async () => {
+    if (!readContract) return
+    try {
+      const [players, scores] = await readContract.getLeaderboard()
+      const rows = (players as string[]).map((p, i) => ({
+        player: p,
+        score: Number((scores as bigint[])[i]),
+      }))
+      setLeaderboard(rows)
+
+      if (account) {
+        const best = await readContract.bestScore(account)
+        setBestOnChain(Number(best as bigint))
+      } else {
+        setBestOnChain(null)
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }, [readContract, account])
+
+  const connectWallet = useCallback(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const eth = (window as any).ethereum
+    if (!eth) {
+      alert('Установи MetaMask')
+      return
+    }
+    const provider = new BrowserProvider(eth)
+    const accounts = await provider.send('eth_requestAccounts', [])
+    setAccount(accounts[0] || null)
+    const network = await provider.getNetwork()
+    setChainId(Number(network.chainId))
+  }, [])
+
+  const switchToBaseSepolia = useCallback(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const eth = (window as any).ethereum
+    if (!eth) return
+    try {
+      await eth.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x14a34' }],
+      })
+    } catch (err: any) {
+      if (err?.code === 4902) {
+        await eth.request({
+          method: 'wallet_addEthereumChain',
+          params: [
+            {
+              chainId: '0x14a34',
+              chainName: 'Base Sepolia',
+              nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['https://sepolia.base.org'],
+              blockExplorerUrls: ['https://sepolia-explorer.base.org'],
+            },
+          ],
+        })
+      }
+    }
+  }, [])
+
+  const submitScoreOnChain = useCallback(
+    async (scoreToSubmit: number) => {
+      if (!contractAddress) {
+        alert('Укажи адрес контракта лидерборда')
+        return
+      }
+      if (!account) {
+        await connectWallet()
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const eth = (window as any).ethereum
+      if (!eth) return
+      const provider = new BrowserProvider(eth)
+      const network = await provider.getNetwork()
+      const cid = Number(network.chainId)
+      setChainId(cid)
+      if (cid !== baseSepoliaChainId) {
+        await switchToBaseSepolia()
+      }
+
+      const signer = await provider.getSigner()
+      const writeContract = new Contract(contractAddress, BLOCKBLAST_LEADERBOARD_ABI, signer)
+      setTxStatus('Submitting score...')
+      try {
+        const tx = await writeContract.submitScore(BigInt(scoreToSubmit))
+        setTxStatus('Waiting for confirmation...')
+        await tx.wait()
+        setTxStatus('Saved on-chain!')
+        await refreshOnChain()
+        setTimeout(() => setTxStatus(null), 2500)
+      } catch (e: any) {
+        console.error(e)
+        setTxStatus(e?.shortMessage || e?.message || 'Transaction failed')
+      }
+    },
+    [contractAddress, account, connectWallet, refreshOnChain, switchToBaseSepolia]
+  )
 
   // Проверка, можно ли разместить блок
   const canPlaceBlock = useCallback((block: Block, row: number, col: number, board: Board): boolean => {
@@ -276,6 +398,16 @@ export default function Home() {
     setNextBlocks(getRandomBlocks())
   }, [initBoard, getRandomBlocks])
 
+  useEffect(() => {
+    // initial load leaderboard if configured
+    refreshOnChain()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contractAddress])
+
+  useEffect(() => {
+    refreshOnChain()
+  }, [account, refreshOnChain])
+
   // Рендер доски с превью
   const renderBoard = () => {
     const displayBoard = board.map(row => [...row])
@@ -342,6 +474,50 @@ export default function Home() {
           </div>
 
           <div className="next-blocks">
+            <div className="instruction-title">ON-CHAIN LEADERBOARD</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+              <input
+                className="retro-input"
+                placeholder="Leaderboard contract address"
+                value={contractAddress}
+                onChange={(e) => setContractAddress(e.target.value.trim())}
+              />
+              {!account ? (
+                <button className="retro-button" onClick={connectWallet}>
+                  CONNECT WALLET
+                </button>
+              ) : (
+                <div className="instruction-item" style={{ wordBreak: 'break-all' }}>
+                  Wallet: {account.slice(0, 6)}…{account.slice(-4)} (chain {chainId ?? '?'})
+                </div>
+              )}
+              {account && chainId !== null && chainId !== baseSepoliaChainId && (
+                <button className="retro-button" onClick={switchToBaseSepolia}>
+                  SWITCH TO BASE SEPOLIA
+                </button>
+              )}
+              <button className="retro-button" onClick={refreshOnChain} disabled={!contractAddress}>
+                REFRESH
+              </button>
+              {bestOnChain !== null && (
+                <div className="instruction-item">Best on-chain: {bestOnChain}</div>
+              )}
+              {txStatus && <div className="instruction-item">{txStatus}</div>}
+            </div>
+            <div style={{ marginTop: 12, maxHeight: 200, overflow: 'auto' }}>
+              {leaderboard.length === 0 ? (
+                <div className="instruction-item">No scores yet</div>
+              ) : (
+                leaderboard.slice(0, 10).map((e, i) => (
+                  <div key={`${e.player}-${i}`} className="instruction-item">
+                    {i + 1}. {e.player.slice(0, 6)}…{e.player.slice(-4)} — {e.score}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="next-blocks">
             <div className="instruction-title">NEXT BLOCKS</div>
             <div className="blocks-container">
               {nextBlocks.map((block, index) => {
@@ -383,6 +559,13 @@ export default function Home() {
             <div className="game-over">
               <div className="game-over-text">GAME OVER</div>
               <div className="game-over-score">Final Score: {score}</div>
+              <button
+                className="retro-button"
+                onClick={() => submitScoreOnChain(score)}
+                disabled={!contractAddress}
+              >
+                SAVE SCORE ON-CHAIN
+              </button>
               <button className="retro-button" onClick={initGame}>
                 PLAY AGAIN
               </button>
