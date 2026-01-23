@@ -29,5 +29,11 @@ export async function GET() {
     },
   }
 
-  return Response.json(manifest)
+  return Response.json(manifest, {
+    headers: {
+      // Base Preview (и некоторые CDN) могут кэшировать .well-known — отключаем кэш,
+      // чтобы изменения в accountAssociation/metadata подхватывались сразу.
+      'Cache-Control': 'no-store, max-age=0',
+    },
+  })
 }
