@@ -132,6 +132,7 @@ export default function Home() {
   const [clearingLines, setClearingLines] = useState<Array<{ row: number } | { col: number }>>([])
   const audioRef = useRef<HTMLAudioElement>(null)
   const [currentThemeIndex, setCurrentThemeIndex] = useState(0)
+  const [draggedBlock, setDraggedBlock] = useState<{ block: Block; index: number; color: string } | null>(null)
   
   // Вычисляем текущую тему на основе счета
   const currentTheme = THEMES[currentThemeIndex % THEMES.length]
@@ -506,6 +507,42 @@ export default function Home() {
     setSelectedBlock({ block, index, color })
   }, [gameOver, gameStarted, currentTheme])
 
+  // Начало перетаскивания блока
+  const handleDragStart = useCallback((e: React.DragEvent, block: Block, index: number) => {
+    if (gameOver || !gameStarted) {
+      e.preventDefault()
+      return
+    }
+    const color = currentTheme.colors[index % currentTheme.colors.length]
+    setDraggedBlock({ block, index, color })
+    setSelectedBlock({ block, index, color })
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', '') // Для совместимости
+  }, [gameOver, gameStarted, currentTheme])
+
+  // Окончание перетаскивания
+  const handleDragEnd = useCallback(() => {
+    setDraggedBlock(null)
+  }, [])
+
+  // Разрешить drop на ячейке
+  const handleDragOver = useCallback((e: React.DragEvent, row: number, col: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (draggedBlock) {
+      handleBoardHover(row, col)
+    }
+  }, [draggedBlock, handleBoardHover])
+
+  // Обработка drop на ячейке
+  const handleDrop = useCallback((e: React.DragEvent, row: number, col: number) => {
+    e.preventDefault()
+    if (draggedBlock && !gameOver && gameStarted) {
+      handleBoardClick(row, col)
+      setDraggedBlock(null)
+    }
+  }, [draggedBlock, gameOver, gameStarted, handleBoardClick])
+
   // Инициализация при загрузке
   useEffect(() => {
     setBoard(initBoard())
@@ -674,7 +711,7 @@ export default function Home() {
                         clearingLines.some(l => ('row' in l && l.row === rowIndex) || ('col' in l && l.col === colIndex))
                           ? 'clearing'
                           : ''
-                      }`}
+                      } ${draggedBlock ? 'drop-zone' : ''}`}
                       style={
                         cell && !isPreview
                           ? { backgroundColor: String(cell) }
@@ -684,6 +721,8 @@ export default function Home() {
                       }
                       onClick={() => handleBoardClick(rowIndex, colIndex)}
                       onMouseEnter={() => handleBoardHover(rowIndex, colIndex)}
+                      onDragOver={(e) => handleDragOver(e, rowIndex, colIndex)}
+                      onDrop={(e) => handleDrop(e, rowIndex, colIndex)}
                     />
                   )
                 })}
@@ -698,15 +737,18 @@ export default function Home() {
             borderColor: currentTheme.borderColor,
           }}
         >
-          <div className="bottom-hint">Pick a block → place it on the 8×8 board</div>
+          <div className="bottom-hint">Drag & drop blocks or click to place on the 8×8 board</div>
           <div className="blocks-container-row">
               {nextBlocks.map((block, index) => {
                 const blockColor = currentTheme.colors[index % currentTheme.colors.length]
               return (
                 <div
                   key={index}
-                  className={`block-preview ${selectedBlock?.index === index ? 'selected' : ''}`}
+                  className={`block-preview ${selectedBlock?.index === index ? 'selected' : ''} ${draggedBlock?.index === index ? 'dragging' : ''}`}
                   onClick={() => handleBlockSelect(block, index)}
+                  draggable={!gameOver && gameStarted}
+                  onDragStart={(e) => handleDragStart(e, block, index)}
+                  onDragEnd={handleDragEnd}
                 >
                   {block.map((row, rowIndex) => (
                     <div key={rowIndex} className="block-row">
