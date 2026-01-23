@@ -190,10 +190,8 @@ body {
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
 }
 
-.board-cell.drop-zone {
-  border: 2px dashed rgba(255, 255, 255, 0.6) !important;
-  background: rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+.game-board {
+  position: relative;
 }
 
 .board-cell.clearing {

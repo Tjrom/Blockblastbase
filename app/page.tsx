@@ -525,23 +525,51 @@ export default function Home() {
     setDraggedBlock(null)
   }, [])
 
-  // Разрешить drop на ячейке
-  const handleDragOver = useCallback((e: React.DragEvent, row: number, col: number) => {
+  // Получить координаты ячейки из координат курсора
+  const getCellFromCoordinates = useCallback((clientX: number, clientY: number): { row: number; col: number } | null => {
+    const boardElement = document.querySelector('.game-board')
+    if (!boardElement) return null
+    
+    const rect = boardElement.getBoundingClientRect()
+    const x = clientX - rect.left
+    const y = clientY - rect.top
+    
+    // Получаем размер ячейки
+    const cellSize = rect.width / BOARD_SIZE
+    const row = Math.floor(y / cellSize)
+    const col = Math.floor(x / cellSize)
+    
+    // Проверяем границы
+    if (row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE) {
+      return { row, col }
+    }
+    return null
+  }, [])
+
+  // Разрешить drop на доске
+  const handleBoardDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
     if (draggedBlock) {
-      handleBoardHover(row, col)
+      const cell = getCellFromCoordinates(e.clientX, e.clientY)
+      if (cell) {
+        handleBoardHover(cell.row, cell.col)
+      }
     }
-  }, [draggedBlock, handleBoardHover])
+  }, [draggedBlock, getCellFromCoordinates, handleBoardHover])
 
-  // Обработка drop на ячейке
-  const handleDrop = useCallback((e: React.DragEvent, row: number, col: number) => {
+  // Обработка drop на доске
+  const handleBoardDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
+    e.stopPropagation()
     if (draggedBlock && !gameOver && gameStarted) {
-      handleBoardClick(row, col)
+      const cell = getCellFromCoordinates(e.clientX, e.clientY)
+      if (cell) {
+        handleBoardClick(cell.row, cell.col)
+      }
       setDraggedBlock(null)
     }
-  }, [draggedBlock, gameOver, gameStarted, handleBoardClick])
+  }, [draggedBlock, gameOver, gameStarted, getCellFromCoordinates, handleBoardClick])
 
   // Инициализация при загрузке
   useEffect(() => {
@@ -694,7 +722,11 @@ export default function Home() {
               </div>
             </div>
           )}
-          <div className="game-board">
+          <div 
+            className="game-board"
+            onDragOver={handleBoardDragOver}
+            onDrop={handleBoardDrop}
+          >
             {displayBoard.map((row, rowIndex) => (
               <div key={rowIndex} className="board-row">
                 {row.map((cell, colIndex) => {
@@ -711,7 +743,7 @@ export default function Home() {
                         clearingLines.some(l => ('row' in l && l.row === rowIndex) || ('col' in l && l.col === colIndex))
                           ? 'clearing'
                           : ''
-                      } ${draggedBlock ? 'drop-zone' : ''}`}
+                      }`}
                       style={
                         cell && !isPreview
                           ? { backgroundColor: String(cell) }
@@ -721,8 +753,6 @@ export default function Home() {
                       }
                       onClick={() => handleBoardClick(rowIndex, colIndex)}
                       onMouseEnter={() => handleBoardHover(rowIndex, colIndex)}
-                      onDragOver={(e) => handleDragOver(e, rowIndex, colIndex)}
-                      onDrop={(e) => handleDrop(e, rowIndex, colIndex)}
                     />
                   )
                 })}
