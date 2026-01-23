@@ -12,12 +12,14 @@ export async function generateMetadata(): Promise<Metadata> {
       'base:app_id': '6971069c5f24b57cc50d333c',
       'fc:miniapp': JSON.stringify({
         version: 'next',
+        imageUrl: `${ROOT_URL}/embed.png`,
         button: {
           title: 'Play Block Blast',
           action: {
-            type: 'launch_miniapp',
+            type: 'launch_frame',
             name: 'Block Blast',
             url: ROOT_URL,
+            splashImageUrl: `${ROOT_URL}/splash.png`,
             splashBackgroundColor: '#0a0e27',
           },
         },
