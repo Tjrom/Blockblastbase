@@ -517,7 +517,7 @@ export default function Home() {
     setDraggedBlock({ block, index, color })
     setSelectedBlock({ block, index, color })
     e.dataTransfer.effectAllowed = 'move'
-    e.dataTransfer.setData('text/plain', '') // Для совместимости
+    e.dataTransfer.setData('text/plain', `${index}`) // Сохраняем индекс для совместимости
   }, [gameOver, gameStarted, currentTheme])
 
   // Окончание перетаскивания

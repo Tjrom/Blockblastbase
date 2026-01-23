@@ -293,6 +293,7 @@ body {
   cursor: grab;
   transition: all 0.2s ease;
   user-select: none;
+  -webkit-user-drag: element;
 }
 
 .block-preview:active {
@@ -300,8 +301,16 @@ body {
 }
 
 .block-preview.dragging {
-  opacity: 0.5;
+  opacity: 0.6;
   transform: scale(0.95);
+}
+
+.block-preview[draggable="true"] {
+  cursor: grab;
+}
+
+.block-preview[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 .block-preview:hover {
