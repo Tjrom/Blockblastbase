@@ -13,6 +13,7 @@ export async function GET() {
       subtitle: 'Puzzle Game on Base',
       description: 'Block Blast puzzle game with on-chain leaderboard on Base Sepolia. Drag and drop blocks to clear lines and compete for the top score!',
       iconUrl: `${ROOT_URL}/icon.png`,
+      imageUrl: `${ROOT_URL}/hero.png`,
       splashImageUrl: `${ROOT_URL}/splash.png`,
       splashBackgroundColor: '#0a0e27',
       homeUrl: ROOT_URL,

@@ -590,7 +590,14 @@ export default function Home() {
 
   // Initialize Mini App SDK
   useEffect(() => {
-    sdk.actions.ready()
+    const initSDK = async () => {
+      try {
+        await sdk.actions.ready()
+      } catch (error) {
+        console.error('SDK ready error:', error)
+      }
+    }
+    initSDK()
   }, [])
 
   // Рендер доски с превью
