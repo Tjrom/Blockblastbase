@@ -209,14 +209,17 @@ export default function Home() {
         setTimeout(() => setCombo(0), 2000)
       }
       
-      // Удаляем использованный блок и добавляем новый
+      // Удаляем использованный блок
       const newNextBlocks = [...nextBlocks]
       newNextBlocks.splice(selectedBlock.index, 1)
       
-      // Добавляем новый блок если осталось меньше 3
-      if (newNextBlocks.length < 3) {
-        const randomIndex = Math.floor(Math.random() * BLOCK_SHAPES.length)
-        newNextBlocks.push(BLOCK_SHAPES[randomIndex])
+      // Добавляем новые блоки только когда все 3 блока использованы (массив пустой)
+      if (newNextBlocks.length === 0) {
+        // Генерируем 3 новых блока
+        for (let i = 0; i < 3; i++) {
+          const randomIndex = Math.floor(Math.random() * BLOCK_SHAPES.length)
+          newNextBlocks.push(BLOCK_SHAPES[randomIndex])
+        }
       }
       
       setNextBlocks(newNextBlocks)
@@ -224,20 +227,22 @@ export default function Home() {
       setSelectedBlock(null)
       setPreviewPosition(null)
       
-      // Проверка на game over
-      const canPlaceAny = newNextBlocks.some(block => {
-        for (let r = 0; r < BOARD_SIZE; r++) {
-          for (let c = 0; c < BOARD_SIZE; c++) {
-            if (canPlaceBlock(block, r, c, clearedBoard)) {
-              return true
+      // Проверка на game over только если есть блоки для размещения
+      if (newNextBlocks.length > 0) {
+        const canPlaceAny = newNextBlocks.some(block => {
+          for (let r = 0; r < BOARD_SIZE; r++) {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+              if (canPlaceBlock(block, r, c, clearedBoard)) {
+                return true
+              }
             }
           }
+          return false
+        })
+        
+        if (!canPlaceAny) {
+          setGameOver(true)
         }
-        return false
-      })
-      
-      if (!canPlaceAny) {
-        setGameOver(true)
       }
     }
   }, [selectedBlock, board, nextBlocks, gameOver, gameStarted, canPlaceBlock, placeBlock, clearLines])
