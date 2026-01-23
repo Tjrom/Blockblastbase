@@ -579,56 +579,87 @@ export default function Home() {
     if (gameOver || !gameStarted) return
     
     const touch = e.touches[0]
+    if (!touch) return
+    
     const color = currentTheme.colors[index % currentTheme.colors.length]
     setDraggedBlock({ block, index, color })
     setSelectedBlock({ block, index, color })
     setTouchStartPos({ x: touch.clientX, y: touch.clientY })
     setIsDragging(true)
+    e.preventDefault()
     e.stopPropagation()
   }, [gameOver, gameStarted, currentTheme])
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+  // Глобальный обработчик touchMove на document
+  useEffect(() => {
     if (!isDragging || !draggedBlock) return
-    
-    const touch = e.touches[0]
-    if (!touch) return
-    
-    const cell = getCellFromCoordinates(touch.clientX, touch.clientY)
-    if (cell) {
-      handleBoardHover(cell.row, cell.col)
+
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      e.preventDefault()
+      const touch = e.touches[0]
+      if (!touch) return
+      
+      const cell = getCellFromCoordinates(touch.clientX, touch.clientY)
+      if (cell) {
+        handleBoardHover(cell.row, cell.col)
+      }
     }
-    e.preventDefault()
-    e.stopPropagation()
+
+    document.addEventListener('touchmove', handleGlobalTouchMove, { passive: false })
+    
+    return () => {
+      document.removeEventListener('touchmove', handleGlobalTouchMove)
+    }
   }, [isDragging, draggedBlock, getCellFromCoordinates, handleBoardHover])
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!draggedBlock) {
-      setIsDragging(false)
-      setTouchStartPos(null)
-      return
-    }
-    
-    const touch = e.changedTouches[0]
-    if (!touch) {
+  // Глобальный обработчик touchEnd на document
+  useEffect(() => {
+    if (!isDragging || !draggedBlock) return
+
+    const handleGlobalTouchEnd = (e: TouchEvent) => {
+      e.preventDefault()
+      const touch = e.changedTouches[0]
+      if (!touch) {
+        setDraggedBlock(null)
+        setIsDragging(false)
+        setTouchStartPos(null)
+        return
+      }
+      
+      const cell = getCellFromCoordinates(touch.clientX, touch.clientY)
+      
+      // Проверяем, что touch закончился на доске
+      if (cell && !gameOver && gameStarted) {
+        handleBoardClick(cell.row, cell.col)
+      }
+      
       setDraggedBlock(null)
       setIsDragging(false)
       setTouchStartPos(null)
-      return
     }
+
+    document.addEventListener('touchend', handleGlobalTouchEnd, { passive: false })
+    document.addEventListener('touchcancel', handleGlobalTouchEnd, { passive: false })
     
-    const cell = getCellFromCoordinates(touch.clientX, touch.clientY)
-    
-    // Проверяем, что touch закончился на доске
-    if (cell && !gameOver && gameStarted) {
-      handleBoardClick(cell.row, cell.col)
+    return () => {
+      document.removeEventListener('touchend', handleGlobalTouchEnd)
+      document.removeEventListener('touchcancel', handleGlobalTouchEnd)
     }
-    
-    setDraggedBlock(null)
-    setIsDragging(false)
-    setTouchStartPos(null)
+  }, [isDragging, draggedBlock, gameOver, gameStarted, getCellFromCoordinates, handleBoardClick])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging || !draggedBlock) return
     e.preventDefault()
     e.stopPropagation()
-  }, [draggedBlock, gameOver, gameStarted, getCellFromCoordinates, handleBoardClick])
+  }, [isDragging, draggedBlock])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    // Обработка на уровне компонента - основная логика в useEffect
+    if (isDragging) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }, [isDragging])
 
   // Touch на ячейке доски
   const handleCellTouchStart = useCallback((e: React.TouchEvent, row: number, col: number) => {
@@ -870,11 +901,20 @@ export default function Home() {
                   onTouchStart={(e) => handleTouchStart(e, block, index)}
                   onTouchEnd={(e) => {
                     // Если просто тапнули без перетаскивания - выбираем блок
-                    if (touchStartPos && !isDragging) {
-                      handleBlockSelect(block, index)
+                    if (!isDragging && touchStartPos) {
+                      const touch = e.changedTouches[0]
+                      if (touch && touchStartPos) {
+                        const dx = Math.abs(touch.clientX - touchStartPos.x)
+                        const dy = Math.abs(touch.clientY - touchStartPos.y)
+                        // Если перемещение меньше 10px - это клик, а не перетаскивание
+                        if (dx < 10 && dy < 10) {
+                          handleBlockSelect(block, index)
+                        }
+                      }
                     }
+                    setTouchStartPos(null)
                   }}
-                  style={{ touchAction: 'manipulation' }}
+                  style={{ touchAction: 'none', WebkitUserSelect: 'none' }}
                 >
                   {block.map((row, rowIndex) => (
                     <div key={rowIndex} className="block-row">
