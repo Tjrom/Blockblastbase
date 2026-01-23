@@ -22,6 +22,9 @@ export async function generateMetadata(): Promise<Metadata> {
           },
         },
       }),
+      'og:title': 'Block Blast - Puzzle Game on Base',
+      'og:description': 'Block Blast puzzle game with on-chain leaderboard on Base Sepolia',
+      'og:image': `${ROOT_URL}/hero.png`,
     },
   }
 }
