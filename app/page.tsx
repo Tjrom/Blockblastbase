@@ -51,15 +51,65 @@ const BLOCK_SHAPES = [
   [[1, 1, 1], [0, 1, 1]],
 ]
 
-const COLORS = [
-  '#FF6B6B', // Красный
-  '#4ECDC4', // Бирюзовый
-  '#45B7D1', // Синий
-  '#FFA07A', // Лососевый
-  '#98D8C8', // Мятный
-  '#F7DC6F', // Желтый
-  '#BB8FCE', // Фиолетовый
-  '#85C1E2', // Голубой
+// Темы игры
+type Theme = {
+  name: string
+  colors: string[]
+  background: string
+  borderColor: string
+  buttonGradient: string
+  music: string
+}
+
+const THEMES: Theme[] = [
+  {
+    name: 'Base',
+    colors: ['#0052ff', '#00b2ff', '#ffffff', '#64b5ff', '#89c3ff', '#b3d9ff', '#d6eaff', '#e8f4ff'],
+    background: 'radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.1) 0%, transparent 55%), radial-gradient(circle at 90% 100%, rgba(0, 82, 255, 0.2) 0%, transparent 55%), linear-gradient(135deg, #0a0e27 0%, #0f1a3a 40%, #0a0e27 100%)',
+    borderColor: 'rgba(0, 178, 255, 0.4)',
+    buttonGradient: 'linear-gradient(135deg, #0052ff 0%, #ffffff 100%)',
+    music: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+  },
+  {
+    name: 'Neon',
+    colors: ['#ff00ff', '#00ffff', '#ffff00', '#ff0080', '#00ff80', '#80ff00', '#ff8000', '#8000ff'],
+    background: 'radial-gradient(circle at 20% 30%, rgba(255, 0, 255, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 70%, rgba(0, 255, 255, 0.3) 0%, transparent 50%), linear-gradient(135deg, #1a0033 0%, #330033 40%, #1a0033 100%)',
+    borderColor: 'rgba(255, 0, 255, 0.6)',
+    buttonGradient: 'linear-gradient(135deg, #ff00ff 0%, #00ffff 100%)',
+    music: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+  },
+  {
+    name: 'Sunset',
+    colors: ['#ff6b6b', '#ffa07a', '#ffd700', '#ff8c00', '#ff6347', '#ff1493', '#ff69b4', '#ffb6c1'],
+    background: 'radial-gradient(circle at 30% 20%, rgba(255, 107, 107, 0.3) 0%, transparent 50%), radial-gradient(circle at 70% 80%, rgba(255, 215, 0, 0.3) 0%, transparent 50%), linear-gradient(135deg, #2d1b3d 0%, #8b3a5c 40%, #2d1b3d 100%)',
+    borderColor: 'rgba(255, 107, 107, 0.6)',
+    buttonGradient: 'linear-gradient(135deg, #ff6b6b 0%, #ffd700 100%)',
+    music: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+  },
+  {
+    name: 'Ocean',
+    colors: ['#00ced1', '#20b2aa', '#48d1cc', '#00bfff', '#1e90ff', '#4169e1', '#6495ed', '#87ceeb'],
+    background: 'radial-gradient(circle at 20% 50%, rgba(0, 206, 209, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(30, 144, 255, 0.3) 0%, transparent 50%), linear-gradient(135deg, #001f3f 0%, #003d6b 40%, #001f3f 100%)',
+    borderColor: 'rgba(0, 206, 209, 0.6)',
+    buttonGradient: 'linear-gradient(135deg, #00ced1 0%, #1e90ff 100%)',
+    music: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+  },
+  {
+    name: 'Forest',
+    colors: ['#32cd32', '#228b22', '#90ee90', '#98fb98', '#00ff7f', '#7cfc00', '#adff2f', '#9acd32'],
+    background: 'radial-gradient(circle at 50% 30%, rgba(50, 205, 50, 0.25) 0%, transparent 50%), radial-gradient(circle at 50% 70%, rgba(144, 238, 144, 0.2) 0%, transparent 50%), linear-gradient(135deg, #0d2818 0%, #1a4d2e 40%, #0d2818 100%)',
+    borderColor: 'rgba(50, 205, 50, 0.6)',
+    buttonGradient: 'linear-gradient(135deg, #32cd32 0%, #90ee90 100%)',
+    music: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
+  },
+  {
+    name: 'Space',
+    colors: ['#9370db', '#ba55d3', '#da70d6', '#dda0dd', '#ee82ee', '#ff00ff', '#ff1493', '#c71585'],
+    background: 'radial-gradient(circle at 25% 25%, rgba(147, 112, 219, 0.3) 0%, transparent 50%), radial-gradient(circle at 75% 75%, rgba(255, 0, 255, 0.3) 0%, transparent 50%), linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 40%, #0a0a1a 100%)',
+    borderColor: 'rgba(147, 112, 219, 0.6)',
+    buttonGradient: 'linear-gradient(135deg, #9370db 0%, #ff00ff 100%)',
+    music: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
+  },
 ]
 
 type Cell = string | null
@@ -81,6 +131,10 @@ export default function Home() {
   const [scoreAnimations, setScoreAnimations] = useState<Array<{ id: number; points: number; x: number; y: number }>>([])
   const [clearingLines, setClearingLines] = useState<Array<{ row: number } | { col: number }>>([])
   const audioRef = useRef<HTMLAudioElement>(null)
+  const [currentThemeIndex, setCurrentThemeIndex] = useState(0)
+  
+  // Вычисляем текущую тему на основе счета
+  const currentTheme = THEMES[currentThemeIndex % THEMES.length]
   const [account, setAccount] = useState<string | null>(null)
   const [chainId, setChainId] = useState<number | null>(null)
   const [leaderboard, setLeaderboard] = useState<{ player: string; score: number }[]>([])
@@ -130,8 +184,10 @@ export default function Home() {
     setSelectedBlock(null)
     setPreviewPosition(null)
     setCombo(0)
+    setCurrentThemeIndex(0)
     // Запускаем музыку если включена
     if (musicOn && audioRef.current) {
+      audioRef.current.src = THEMES[0].music
       audioRef.current.volume = 0.3
       audioRef.current.play().catch(() => {})
     }
@@ -141,13 +197,14 @@ export default function Home() {
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = 0.3
+      audioRef.current.src = currentTheme.music
       if (musicOn && gameStarted) {
         audioRef.current.play().catch(() => {})
       } else {
         audioRef.current.pause()
       }
     }
-  }, [musicOn, gameStarted])
+  }, [musicOn, gameStarted, currentTheme])
 
   const refreshOnChain = useCallback(async () => {
     if (!readContract) return
@@ -355,9 +412,22 @@ export default function Home() {
       
       if (cleared > 0) {
         const points = cleared * 10 * comboMultiplier
+        const newScore = score + points
         setLines(prev => prev + cleared)
-        setScore(prev => prev + points)
+        setScore(newScore)
         setCombo(comboMultiplier > 1 ? comboMultiplier : 0)
+        
+        // Проверяем, нужно ли сменить тему (каждые 50 очков)
+        const newThemeIndex = Math.floor(newScore / 50)
+        if (newThemeIndex !== currentThemeIndex) {
+          setCurrentThemeIndex(newThemeIndex)
+          // Меняем музыку если включена
+          if (musicOn && audioRef.current) {
+            audioRef.current.pause()
+            audioRef.current.src = THEMES[newThemeIndex % THEMES.length].music
+            audioRef.current.play().catch(() => {})
+          }
+        }
         
         // Анимация очков
         const animationId = Date.now()
@@ -411,7 +481,7 @@ export default function Home() {
         }
       }
     }
-  }, [selectedBlock, board, nextBlocks, gameOver, gameStarted, canPlaceBlock, placeBlock, clearLines])
+  }, [selectedBlock, board, nextBlocks, gameOver, gameStarted, canPlaceBlock, placeBlock, clearLines, score, currentThemeIndex, musicOn])
 
   // Обработка наведения на доску
   const handleBoardHover = useCallback((row: number, col: number) => {
@@ -432,9 +502,9 @@ export default function Home() {
   // Выбор блока
   const handleBlockSelect = useCallback((block: Block, index: number) => {
     if (gameOver || !gameStarted) return
-    const color = COLORS[index % COLORS.length]
+    const color = currentTheme.colors[index % currentTheme.colors.length]
     setSelectedBlock({ block, index, color })
-  }, [gameOver, gameStarted])
+  }, [gameOver, gameStarted, currentTheme])
 
   // Инициализация при загрузке
   useEffect(() => {
@@ -480,24 +550,44 @@ export default function Home() {
   const displayBoard = renderBoard()
 
   return (
-    <div className="game-container">
+    <div 
+      className="game-container"
+      style={{
+        background: currentTheme.background,
+      }}
+    >
       <div className="game-topbar">
         <div className="brand">
           <div className="brand-title">BLOCK BLAST</div>
-          <div className="brand-subtitle">ON BASE</div>
+          <div className="brand-subtitle">{currentTheme.name.toUpperCase()} THEME</div>
         </div>
 
         <div className="hud">
-          <div className="hud-box">
+          <div 
+            className="hud-box"
+            style={{
+              borderColor: currentTheme.borderColor,
+            }}
+          >
             <div className="stat-label">SCORE</div>
             <div className="stat-value">{score.toLocaleString()}</div>
           </div>
-          <div className="hud-box">
+          <div 
+            className="hud-box"
+            style={{
+              borderColor: currentTheme.borderColor,
+            }}
+          >
             <div className="stat-label">LINES</div>
             <div className="stat-value">{lines}</div>
           </div>
           {combo > 1 && (
-            <div className="hud-box">
+            <div 
+              className="hud-box"
+              style={{
+                borderColor: currentTheme.borderColor,
+              }}
+            >
               <div className="stat-label">COMBO</div>
               <div className="stat-value combo-text">x{combo}</div>
             </div>
@@ -523,6 +613,9 @@ export default function Home() {
           )}
           <button
             className="retro-button"
+            style={{
+              background: currentTheme.buttonGradient,
+            }}
             onClick={() => {
               setShowLeaderboardModal(true)
               refreshOnChain()
@@ -534,7 +627,12 @@ export default function Home() {
       </div>
 
       <div className="game-stage">
-        <div className="game-board-container">
+          <div 
+            className="game-board-container"
+            style={{
+              borderColor: currentTheme.borderColor,
+            }}
+          >
           {gameOver && (
             <div className="game-over">
               <div className="game-over-text">GAME OVER</div>
@@ -542,6 +640,9 @@ export default function Home() {
               <div className="game-over-actions">
                 <button
                   className="retro-button"
+            style={{
+              background: currentTheme.buttonGradient,
+            }}
                   onClick={() => submitScoreOnChain(score)}
                   disabled={!contractAddress}
                 >
@@ -591,11 +692,16 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="bottom-panel">
+        <div 
+          className="bottom-panel"
+          style={{
+            borderColor: currentTheme.borderColor,
+          }}
+        >
           <div className="bottom-hint">Pick a block → place it on the 8×8 board</div>
           <div className="blocks-container-row">
-            {nextBlocks.map((block, index) => {
-              const blockColor = COLORS[index % COLORS.length]
+              {nextBlocks.map((block, index) => {
+                const blockColor = currentTheme.colors[index % currentTheme.colors.length]
               return (
                 <div
                   key={index}
@@ -621,11 +727,7 @@ export default function Home() {
       </div>
 
       {/* Фоновая музыка */}
-      <audio
-        ref={audioRef}
-        loop
-        src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-      />
+      <audio ref={audioRef} loop />
 
       {/* Анимации очков */}
       {scoreAnimations.map((anim) => (
