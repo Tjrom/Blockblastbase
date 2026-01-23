@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useMemo, useState, useRef } from 'react'
 import { BrowserProvider, Contract, JsonRpcProvider } from 'ethers'
+import { sdk } from '@farcaster/miniapp-sdk'
 import './game.css'
 import { BLOCKBLAST_LEADERBOARD_ABI } from '../lib/leaderboardAbi'
 
@@ -586,6 +587,11 @@ export default function Home() {
   useEffect(() => {
     refreshOnChain()
   }, [account, refreshOnChain])
+
+  // Initialize Mini App SDK
+  useEffect(() => {
+    sdk.actions.ready()
+  }, [])
 
   // Рендер доски с превью
   const renderBoard = () => {
