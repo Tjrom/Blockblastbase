@@ -441,7 +441,7 @@ export default function Home() {
       <div className="game-topbar">
         <div className="brand">
           <div className="brand-title">BLOCK BLAST</div>
-          <div className="brand-subtitle">PUZZLE</div>
+          <div className="brand-subtitle">ON BASE</div>
         </div>
 
         <div className="hud">
