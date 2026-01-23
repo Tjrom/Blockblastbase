@@ -19,6 +19,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <meta name="base:app_id" content="6971069c5f24b57cc50d333c" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body>
         <BaseVerification />
