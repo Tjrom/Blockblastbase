@@ -584,31 +584,41 @@ export default function Home() {
     setSelectedBlock({ block, index, color })
     setTouchStartPos({ x: touch.clientX, y: touch.clientY })
     setIsDragging(true)
-    e.preventDefault()
+    e.stopPropagation()
   }, [gameOver, gameStarted, currentTheme])
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isDragging || !draggedBlock) return
     
     const touch = e.touches[0]
+    if (!touch) return
+    
     const cell = getCellFromCoordinates(touch.clientX, touch.clientY)
     if (cell) {
       handleBoardHover(cell.row, cell.col)
     }
     e.preventDefault()
+    e.stopPropagation()
   }, [isDragging, draggedBlock, getCellFromCoordinates, handleBoardHover])
 
   const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (!isDragging || !draggedBlock) {
+    if (!draggedBlock) {
       setIsDragging(false)
       setTouchStartPos(null)
       return
     }
     
     const touch = e.changedTouches[0]
+    if (!touch) {
+      setDraggedBlock(null)
+      setIsDragging(false)
+      setTouchStartPos(null)
+      return
+    }
+    
     const cell = getCellFromCoordinates(touch.clientX, touch.clientY)
     
-    // Проверяем, что touch закончился на доске (не просто отпустили палец)
+    // Проверяем, что touch закончился на доске
     if (cell && !gameOver && gameStarted) {
       handleBoardClick(cell.row, cell.col)
     }
@@ -617,7 +627,18 @@ export default function Home() {
     setIsDragging(false)
     setTouchStartPos(null)
     e.preventDefault()
-  }, [isDragging, draggedBlock, gameOver, gameStarted, getCellFromCoordinates, handleBoardClick])
+    e.stopPropagation()
+  }, [draggedBlock, gameOver, gameStarted, getCellFromCoordinates, handleBoardClick])
+
+  // Touch на ячейке доски
+  const handleCellTouchStart = useCallback((e: React.TouchEvent, row: number, col: number) => {
+    if (selectedBlock && !gameOver && gameStarted) {
+      // Если блок уже выбран, размещаем его сразу
+      handleBoardClick(row, col)
+      e.preventDefault()
+      e.stopPropagation()
+    }
+  }, [selectedBlock, gameOver, gameStarted, handleBoardClick])
 
   // Инициализация при загрузке
   useEffect(() => {
@@ -791,6 +812,7 @@ export default function Home() {
             onDrop={handleBoardDrop}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
           >
             {displayBoard.map((row, rowIndex) => (
               <div key={rowIndex} className="board-row">
@@ -818,6 +840,7 @@ export default function Home() {
                       }
                       onClick={() => handleBoardClick(rowIndex, colIndex)}
                       onMouseEnter={() => handleBoardHover(rowIndex, colIndex)}
+                      onTouchStart={(e) => handleCellTouchStart(e, rowIndex, colIndex)}
                     />
                   )
                 })}
@@ -845,7 +868,13 @@ export default function Home() {
                   onDragStart={(e) => handleDragStart(e, block, index)}
                   onDragEnd={handleDragEnd}
                   onTouchStart={(e) => handleTouchStart(e, block, index)}
-                  style={{ touchAction: 'none' }}
+                  onTouchEnd={(e) => {
+                    // Если просто тапнули без перетаскивания - выбираем блок
+                    if (touchStartPos && !isDragging) {
+                      handleBlockSelect(block, index)
+                    }
+                  }}
+                  style={{ touchAction: 'manipulation' }}
                 >
                   {block.map((row, rowIndex) => (
                     <div key={rowIndex} className="block-row">
