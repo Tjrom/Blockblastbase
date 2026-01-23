@@ -625,7 +625,7 @@ export default function Home() {
                   {leaderboard.length === 0 ? (
                     <div className="instruction-item">No scores yet</div>
                   ) : (
-                    leaderboard.slice(0, 25).map((e, i) => (
+                    leaderboard.slice(0, 10).map((e, i) => (
                       <div key={`${e.player}-${i}`} className="instruction-item">
                         {i + 1}. {e.player.slice(0, 6)}…{e.player.slice(-4)} — {e.score}
                       </div>
