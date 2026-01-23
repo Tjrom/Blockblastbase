@@ -591,7 +591,7 @@ export default function Home() {
   const renderBoard = () => {
     const displayBoard = board.map(row => [...row])
     
-    // Добавляем превью блока
+    // Добавляем превью блока только на пустые ячейки
     if (selectedBlock && previewPosition) {
       const { block, color } = selectedBlock
       const { row, col } = previewPosition
@@ -602,7 +602,10 @@ export default function Home() {
             const boardRow = row + r
             const boardCol = col + c
             if (boardRow >= 0 && boardRow < BOARD_SIZE && boardCol >= 0 && boardCol < BOARD_SIZE) {
-              displayBoard[boardRow][boardCol] = `preview-${color}`
+              // Показываем preview только если ячейка пустая
+              if (displayBoard[boardRow][boardCol] === null) {
+                displayBoard[boardRow][boardCol] = `preview-${color}`
+              }
             }
           }
         }
@@ -748,7 +751,7 @@ export default function Home() {
                         cell && !isPreview
                           ? { backgroundColor: String(cell) }
                           : isPreview && previewColor
-                          ? { backgroundColor: previewColor, opacity: 0.5 }
+                          ? { backgroundColor: previewColor, opacity: 0.4 }
                           : {}
                       }
                       onClick={() => handleBoardClick(rowIndex, colIndex)}

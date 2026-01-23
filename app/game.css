@@ -182,12 +182,16 @@ body {
   box-shadow: 
     0 0 8px currentColor,
     inset 0 0 8px rgba(255, 255, 255, 0.2);
+  position: relative;
+  z-index: 2;
 }
 
 .board-cell.preview {
   border: 2px dashed #ffffff;
   background: rgba(255, 255, 255, 0.15);
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
+  position: relative;
+  z-index: 1;
 }
 
 .game-board {
