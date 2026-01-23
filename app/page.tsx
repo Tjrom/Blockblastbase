@@ -134,6 +134,8 @@ export default function Home() {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [currentThemeIndex, setCurrentThemeIndex] = useState(0)
   const [draggedBlock, setDraggedBlock] = useState<{ block: Block; index: number; color: string } | null>(null)
+  const [touchStartPos, setTouchStartPos] = useState<{ x: number; y: number } | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
   
   // Вычисляем текущую тему на основе счета
   const currentTheme = THEMES[currentThemeIndex % THEMES.length]
@@ -572,6 +574,51 @@ export default function Home() {
     }
   }, [draggedBlock, gameOver, gameStarted, getCellFromCoordinates, handleBoardClick])
 
+  // Touch события для мобильных устройств
+  const handleTouchStart = useCallback((e: React.TouchEvent, block: Block, index: number) => {
+    if (gameOver || !gameStarted) return
+    
+    const touch = e.touches[0]
+    const color = currentTheme.colors[index % currentTheme.colors.length]
+    setDraggedBlock({ block, index, color })
+    setSelectedBlock({ block, index, color })
+    setTouchStartPos({ x: touch.clientX, y: touch.clientY })
+    setIsDragging(true)
+    e.preventDefault()
+  }, [gameOver, gameStarted, currentTheme])
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isDragging || !draggedBlock) return
+    
+    const touch = e.touches[0]
+    const cell = getCellFromCoordinates(touch.clientX, touch.clientY)
+    if (cell) {
+      handleBoardHover(cell.row, cell.col)
+    }
+    e.preventDefault()
+  }, [isDragging, draggedBlock, getCellFromCoordinates, handleBoardHover])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!isDragging || !draggedBlock) {
+      setIsDragging(false)
+      setTouchStartPos(null)
+      return
+    }
+    
+    const touch = e.changedTouches[0]
+    const cell = getCellFromCoordinates(touch.clientX, touch.clientY)
+    
+    // Проверяем, что touch закончился на доске (не просто отпустили палец)
+    if (cell && !gameOver && gameStarted) {
+      handleBoardClick(cell.row, cell.col)
+    }
+    
+    setDraggedBlock(null)
+    setIsDragging(false)
+    setTouchStartPos(null)
+    e.preventDefault()
+  }, [isDragging, draggedBlock, gameOver, gameStarted, getCellFromCoordinates, handleBoardClick])
+
   // Инициализация при загрузке
   useEffect(() => {
     setBoard(initBoard())
@@ -742,6 +789,8 @@ export default function Home() {
             className="game-board"
             onDragOver={handleBoardDragOver}
             onDrop={handleBoardDrop}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
             {displayBoard.map((row, rowIndex) => (
               <div key={rowIndex} className="board-row">
@@ -795,6 +844,8 @@ export default function Home() {
                   draggable={!gameOver && gameStarted}
                   onDragStart={(e) => handleDragStart(e, block, index)}
                   onDragEnd={handleDragEnd}
+                  onTouchStart={(e) => handleTouchStart(e, block, index)}
+                  style={{ touchAction: 'none' }}
                 >
                   {block.map((row, rowIndex) => (
                     <div key={rowIndex} className="block-row">
