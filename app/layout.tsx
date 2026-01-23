@@ -8,6 +8,18 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: 'Block Blast - Puzzle Game on Base',
     description: 'Block Blast puzzle game with on-chain leaderboard on Base Sepolia',
+    openGraph: {
+      title: 'Block Blast - Puzzle Game on Base',
+      description: 'Block Blast puzzle game with on-chain leaderboard on Base Sepolia',
+      images: [`${ROOT_URL}/embed.png`],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Block Blast - Puzzle Game on Base',
+      description: 'Block Blast puzzle game with on-chain leaderboard on Base Sepolia',
+      images: [`${ROOT_URL}/embed.png`],
+    },
     other: {
       'base:app_id': '6971069c5f24b57cc50d333c',
       'fc:miniapp': JSON.stringify({
@@ -24,9 +36,6 @@ export async function generateMetadata(): Promise<Metadata> {
           },
         },
       }),
-      'og:title': 'Block Blast - Puzzle Game on Base',
-      'og:description': 'Block Blast puzzle game with on-chain leaderboard on Base Sepolia',
-      'og:image': `${ROOT_URL}/hero.png`,
     },
   }
 }
