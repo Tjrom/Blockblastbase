@@ -76,6 +76,7 @@ export default function Home() {
   const [selectedBlock, setSelectedBlock] = useState<{ block: Block; index: number; color: string } | null>(null)
   const [previewPosition, setPreviewPosition] = useState<{ row: number; col: number } | null>(null)
   const [combo, setCombo] = useState(0)
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false)
   const [account, setAccount] = useState<string | null>(null)
   const [chainId, setChainId] = useState<number | null>(null)
   const [leaderboard, setLeaderboard] = useState<{ player: string; score: number }[]>([])
@@ -437,138 +438,72 @@ export default function Home() {
 
   return (
     <div className="game-container">
-      <div className="game-header">
-        <h1 className="game-title">🎮 BLOCK BLAST</h1>
-        <p className="game-subtitle">CLASSIC PUZZLE GAME</p>
-      </div>
-
-      <div className="game-wrapper">
-        <div className="game-sidebar">
-          <div className="game-stats">
-            <div className="stat-item">
-              <div className="stat-label">SCORE</div>
-              <div className="stat-value">{score.toLocaleString()}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-label">LINES</div>
-              <div className="stat-value">{lines}</div>
-            </div>
-            {combo > 1 && (
-              <div className="stat-item">
-                <div className="stat-label">COMBO</div>
-                <div className="stat-value combo-text">x{combo}</div>
-              </div>
-            )}
-          </div>
-
-          <div className="game-controls">
-            {!gameStarted ? (
-              <button className="retro-button" onClick={initGame}>
-                START GAME
-              </button>
-            ) : (
-              <button className="retro-button" onClick={initGame}>
-                NEW GAME
-              </button>
-            )}
-          </div>
-
-          <div className="next-blocks">
-            <div className="instruction-title">ON-CHAIN LEADERBOARD</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-              <input
-                className="retro-input"
-                placeholder="Leaderboard contract address"
-                value={contractAddress}
-                onChange={(e) => setContractAddress(e.target.value.trim())}
-              />
-              {!account ? (
-                <button className="retro-button" onClick={connectWallet}>
-                  CONNECT WALLET
-                </button>
-              ) : (
-                <div className="instruction-item" style={{ wordBreak: 'break-all' }}>
-                  Wallet: {account.slice(0, 6)}…{account.slice(-4)} (chain {chainId ?? '?'})
-                </div>
-              )}
-              {account && chainId !== null && chainId !== baseSepoliaChainId && (
-                <button className="retro-button" onClick={switchToBaseSepolia}>
-                  SWITCH TO BASE SEPOLIA
-                </button>
-              )}
-              <button className="retro-button" onClick={refreshOnChain} disabled={!contractAddress}>
-                REFRESH
-              </button>
-              {bestOnChain !== null && (
-                <div className="instruction-item">Best on-chain: {bestOnChain}</div>
-              )}
-              {txStatus && <div className="instruction-item">{txStatus}</div>}
-            </div>
-            <div style={{ marginTop: 12, maxHeight: 200, overflow: 'auto' }}>
-              {leaderboard.length === 0 ? (
-                <div className="instruction-item">No scores yet</div>
-              ) : (
-                leaderboard.slice(0, 10).map((e, i) => (
-                  <div key={`${e.player}-${i}`} className="instruction-item">
-                    {i + 1}. {e.player.slice(0, 6)}…{e.player.slice(-4)} — {e.score}
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="next-blocks">
-            <div className="instruction-title">NEXT BLOCKS</div>
-            <div className="blocks-container">
-              {nextBlocks.map((block, index) => {
-                const blockColor = COLORS[index % COLORS.length]
-                return (
-                  <div
-                    key={index}
-                    className={`block-preview ${selectedBlock?.index === index ? 'selected' : ''}`}
-                    onClick={() => handleBlockSelect(block, index)}
-                  >
-                    {block.map((row, rowIndex) => (
-                      <div key={rowIndex} className="block-row">
-                        {row.map((cell, colIndex) => (
-                          <div
-                            key={colIndex}
-                            className={`block-cell ${cell ? 'filled' : ''}`}
-                            style={cell ? { backgroundColor: blockColor } : {}}
-                          />
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="game-instructions">
-            <div className="instruction-title">HOW TO PLAY</div>
-            <div className="instruction-item">1. Click a block</div>
-            <div className="instruction-item">2. Place it on board</div>
-            <div className="instruction-item">3. Fill lines/columns</div>
-            <div className="instruction-item">4. Clear & score!</div>
-          </div>
+      <div className="game-topbar">
+        <div className="brand">
+          <div className="brand-title">BLOCK BLAST</div>
+          <div className="brand-subtitle">PUZZLE</div>
         </div>
 
+        <div className="hud">
+          <div className="hud-box">
+            <div className="stat-label">SCORE</div>
+            <div className="stat-value">{score.toLocaleString()}</div>
+          </div>
+          <div className="hud-box">
+            <div className="stat-label">LINES</div>
+            <div className="stat-value">{lines}</div>
+          </div>
+          {combo > 1 && (
+            <div className="hud-box">
+              <div className="stat-label">COMBO</div>
+              <div className="stat-value combo-text">x{combo}</div>
+            </div>
+          )}
+        </div>
+
+        <div className="top-actions">
+          {!gameStarted ? (
+            <button className="retro-button" onClick={initGame}>
+              START
+            </button>
+          ) : (
+            <button className="retro-button" onClick={initGame}>
+              NEW
+            </button>
+          )}
+          <button
+            className="retro-button"
+            onClick={() => {
+              setShowLeaderboardModal(true)
+              refreshOnChain()
+            }}
+          >
+            LEADERBOARD
+          </button>
+        </div>
+      </div>
+
+      <div className="game-stage">
         <div className="game-board-container">
           {gameOver && (
             <div className="game-over">
               <div className="game-over-text">GAME OVER</div>
               <div className="game-over-score">Final Score: {score}</div>
-              <button
-                className="retro-button"
-                onClick={() => submitScoreOnChain(score)}
-                disabled={!contractAddress}
-              >
-                SAVE SCORE ON-CHAIN
-              </button>
-              <button className="retro-button" onClick={initGame}>
-                PLAY AGAIN
-              </button>
+              <div className="game-over-actions">
+                <button
+                  className="retro-button"
+                  onClick={() => submitScoreOnChain(score)}
+                  disabled={!contractAddress}
+                >
+                  SAVE ON-CHAIN
+                </button>
+                <button className="retro-button" onClick={() => setShowLeaderboardModal(true)}>
+                  OPEN LEADERBOARD
+                </button>
+                <button className="retro-button" onClick={initGame}>
+                  PLAY AGAIN
+                </button>
+              </div>
             </div>
           )}
           <div className="game-board">
@@ -580,7 +515,9 @@ export default function Home() {
                   return (
                     <div
                       key={`${rowIndex}-${colIndex}`}
-                      className={`board-cell ${cell && !isPreview ? 'filled' : ''} ${isPreview ? 'preview' : ''}`}
+                      className={`board-cell ${cell && !isPreview ? 'filled' : ''} ${
+                        isPreview ? 'preview' : ''
+                      }`}
                       style={
                         cell && !isPreview
                           ? { backgroundColor: String(cell) }
@@ -597,7 +534,116 @@ export default function Home() {
             ))}
           </div>
         </div>
+
+        <div className="bottom-panel">
+          <div className="bottom-hint">Pick a block → place it on the 8×8 board</div>
+          <div className="blocks-container-row">
+            {nextBlocks.map((block, index) => {
+              const blockColor = COLORS[index % COLORS.length]
+              return (
+                <div
+                  key={index}
+                  className={`block-preview ${selectedBlock?.index === index ? 'selected' : ''}`}
+                  onClick={() => handleBlockSelect(block, index)}
+                >
+                  {block.map((row, rowIndex) => (
+                    <div key={rowIndex} className="block-row">
+                      {row.map((cell, colIndex) => (
+                        <div
+                          key={colIndex}
+                          className={`block-cell ${cell ? 'filled' : ''}`}
+                          style={cell ? { backgroundColor: blockColor } : {}}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
+          </div>
+        </div>
       </div>
+
+      {showLeaderboardModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => {
+            setShowLeaderboardModal(false)
+          }}
+        >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">ON-CHAIN LEADERBOARD</div>
+              <button className="modal-close" onClick={() => setShowLeaderboardModal(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="modal-section">
+                <div className="instruction-item" style={{ marginBottom: 8 }}>
+                  Network: Base Sepolia
+                </div>
+                <input
+                  className="retro-input"
+                  placeholder="Leaderboard contract address"
+                  value={contractAddress}
+                  onChange={(e) => setContractAddress(e.target.value.trim())}
+                />
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+                  {!account ? (
+                    <button className="retro-button" onClick={connectWallet}>
+                      CONNECT WALLET
+                    </button>
+                  ) : (
+                    <div className="instruction-item" style={{ wordBreak: 'break-all' }}>
+                      Wallet: {account.slice(0, 6)}…{account.slice(-4)} (chain {chainId ?? '?'})
+                    </div>
+                  )}
+
+                  {account && chainId !== null && chainId !== baseSepoliaChainId && (
+                    <button className="retro-button" onClick={switchToBaseSepolia}>
+                      SWITCH TO BASE SEPOLIA
+                    </button>
+                  )}
+
+                  <button className="retro-button" onClick={refreshOnChain} disabled={!contractAddress}>
+                    REFRESH
+                  </button>
+
+                  {bestOnChain !== null && (
+                    <div className="instruction-item">Your best on-chain: {bestOnChain}</div>
+                  )}
+                  {txStatus && <div className="instruction-item">{txStatus}</div>}
+                </div>
+              </div>
+
+              <div className="modal-section">
+                <div className="instruction-title">TOP SCORES</div>
+                <div className="leaderboard-list">
+                  {leaderboard.length === 0 ? (
+                    <div className="instruction-item">No scores yet</div>
+                  ) : (
+                    leaderboard.slice(0, 25).map((e, i) => (
+                      <div key={`${e.player}-${i}`} className="instruction-item">
+                        {i + 1}. {e.player.slice(0, 6)}…{e.player.slice(-4)} — {e.score}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="modal-section">
+                <div className="instruction-title">HOW TO PLAY</div>
+                <div className="instruction-item">- Use all 3 blocks, then you get 3 new blocks</div>
+                <div className="instruction-item">- Fill rows or columns to clear</div>
+                <div className="instruction-item">- Save your best score on-chain after Game Over</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
