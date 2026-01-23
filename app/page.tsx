@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useCallback, useMemo, useState } from 'react'
+import { useEffect, useCallback, useMemo, useState, useRef } from 'react'
 import { BrowserProvider, Contract, JsonRpcProvider } from 'ethers'
 import './game.css'
 import { BLOCKBLAST_LEADERBOARD_ABI } from '../lib/leaderboardAbi'
@@ -77,6 +77,10 @@ export default function Home() {
   const [previewPosition, setPreviewPosition] = useState<{ row: number; col: number } | null>(null)
   const [combo, setCombo] = useState(0)
   const [showLeaderboardModal, setShowLeaderboardModal] = useState(false)
+  const [musicOn, setMusicOn] = useState(false)
+  const [scoreAnimations, setScoreAnimations] = useState<Array<{ id: number; points: number; x: number; y: number }>>([])
+  const [clearingLines, setClearingLines] = useState<Array<{ row: number } | { col: number }>>([])
+  const audioRef = useRef<HTMLAudioElement>(null)
   const [account, setAccount] = useState<string | null>(null)
   const [chainId, setChainId] = useState<number | null>(null)
   const [leaderboard, setLeaderboard] = useState<{ player: string; score: number }[]>([])
@@ -126,7 +130,24 @@ export default function Home() {
     setSelectedBlock(null)
     setPreviewPosition(null)
     setCombo(0)
-  }, [initBoard, getRandomBlocks])
+    // Запускаем музыку если включена
+    if (musicOn && audioRef.current) {
+      audioRef.current.volume = 0.3
+      audioRef.current.play().catch(() => {})
+    }
+  }, [initBoard, getRandomBlocks, musicOn])
+  
+  // Управление музыкой
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = 0.3
+      if (musicOn && gameStarted) {
+        audioRef.current.play().catch(() => {})
+      } else {
+        audioRef.current.pause()
+      }
+    }
+  }, [musicOn, gameStarted])
 
   const refreshOnChain = useCallback(async () => {
     if (!readContract) return
@@ -265,7 +286,7 @@ export default function Home() {
   }, [])
 
   // Удалить заполненные линии и столбцы
-  const clearLines = useCallback((board: Board): { newBoard: Board; cleared: number; combo: number } => {
+  const clearLines = useCallback((board: Board): { newBoard: Board; cleared: number; combo: number; linesToClear: Array<{ row: number } | { col: number }> } => {
     let newBoard = board.map(row => [...row])
     let cleared = 0
     const rowsToClear: number[] = []
@@ -292,6 +313,16 @@ export default function Home() {
       }
     }
     
+    // Запускаем анимацию очистки
+    const linesToClear: Array<{ row: number } | { col: number }> = [
+      ...rowsToClear.map(r => ({ row: r })),
+      ...colsToClear.map(c => ({ col: c })),
+    ]
+    if (linesToClear.length > 0) {
+      setClearingLines(linesToClear)
+      setTimeout(() => setClearingLines([]), 500)
+    }
+    
     // Очистка строк
     for (const row of rowsToClear) {
       newBoard[row] = Array(BOARD_SIZE).fill(null)
@@ -309,7 +340,7 @@ export default function Home() {
     // Комбо: если очищено больше 1 линии - бонус
     const comboMultiplier = cleared > 1 ? cleared : 1
     
-    return { newBoard, cleared, combo: comboMultiplier }
+    return { newBoard, cleared, combo: comboMultiplier, linesToClear }
   }, [])
 
   // Обработка клика по доске
@@ -318,15 +349,27 @@ export default function Home() {
 
     const { block, color } = selectedBlock
     
-    if (canPlaceBlock(block, row, col, board)) {
+      if (canPlaceBlock(block, row, col, board)) {
       const newBoard = placeBlock(block, row, col, color, board)
-      const { newBoard: clearedBoard, cleared, combo: comboMultiplier } = clearLines(newBoard)
+      const { newBoard: clearedBoard, cleared, combo: comboMultiplier, linesToClear } = clearLines(newBoard)
       
       if (cleared > 0) {
         const points = cleared * 10 * comboMultiplier
         setLines(prev => prev + cleared)
         setScore(prev => prev + points)
         setCombo(comboMultiplier > 1 ? comboMultiplier : 0)
+        
+        // Анимация очков
+        const animationId = Date.now()
+        const cellRect = document.querySelector(`[data-row="${row}"][data-col="${col}"]`)?.getBoundingClientRect()
+        const boardRect = document.querySelector('.game-board-container')?.getBoundingClientRect()
+        const x = cellRect ? cellRect.left + cellRect.width / 2 - (boardRect?.left || 0) : 200
+        const y = cellRect ? cellRect.top + cellRect.height / 2 - (boardRect?.top || 0) : 200
+        
+        setScoreAnimations(prev => [...prev, { id: animationId, points, x, y }])
+        setTimeout(() => {
+          setScoreAnimations(prev => prev.filter(a => a.id !== animationId))
+        }, 1000)
         
         // Сброс комбо через 2 секунды
         setTimeout(() => setCombo(0), 2000)
@@ -462,6 +505,13 @@ export default function Home() {
         </div>
 
         <div className="top-actions">
+          <button
+            className="retro-button music-button"
+            onClick={() => setMusicOn(!musicOn)}
+            title={musicOn ? 'Music ON' : 'Music OFF'}
+          >
+            {musicOn ? '🔊' : '🔇'}
+          </button>
           {!gameStarted ? (
             <button className="retro-button" onClick={initGame}>
               START
@@ -515,8 +565,14 @@ export default function Home() {
                   return (
                     <div
                       key={`${rowIndex}-${colIndex}`}
+                      data-row={rowIndex}
+                      data-col={colIndex}
                       className={`board-cell ${cell && !isPreview ? 'filled' : ''} ${
                         isPreview ? 'preview' : ''
+                      } ${
+                        clearingLines.some(l => ('row' in l && l.row === rowIndex) || ('col' in l && l.col === colIndex))
+                          ? 'clearing'
+                          : ''
                       }`}
                       style={
                         cell && !isPreview
@@ -563,6 +619,27 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Фоновая музыка */}
+      <audio
+        ref={audioRef}
+        loop
+        src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+      />
+
+      {/* Анимации очков */}
+      {scoreAnimations.map((anim) => (
+        <div
+          key={anim.id}
+          className="score-animation"
+          style={{
+            left: `${anim.x}px`,
+            top: `${anim.y}px`,
+          }}
+        >
+          +{anim.points}
+        </div>
+      ))}
 
       {showLeaderboardModal && (
         <div

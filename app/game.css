@@ -193,6 +193,52 @@ body {
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.4);
 }
 
+.board-cell.clearing {
+  animation: lineClear 0.5s ease-out;
+}
+
+@keyframes lineClear {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0);
+    opacity: 0;
+  }
+}
+
+.score-animation {
+  position: absolute;
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 0 10px rgba(0, 82, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.6);
+  pointer-events: none;
+  z-index: 200;
+  animation: scorePop 1s ease-out forwards;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes scorePop {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -150%) scale(1);
+  }
+}
+
 .retro-button {
   font-family: 'Inter', sans-serif;
   font-size: 13px;
@@ -224,6 +270,12 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+}
+
+.music-button {
+  min-width: 50px;
+  padding: 10px;
+  font-size: 18px;
 }
 
 .block-preview {
