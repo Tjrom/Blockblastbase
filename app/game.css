@@ -1,0 +1,344 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Press Start 2P', cursive;
+  background: #000;
+  color: #00ffff;
+}
+
+.game-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: 
+    radial-gradient(circle at 20% 50%, #1a0033 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, #330033 0%, transparent 50%),
+    linear-gradient(135deg, #000000 0%, #1a0033 50%, #000000 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Scanlines эффект */
+.game-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.15),
+    rgba(0, 0, 0, 0.15) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.game-header {
+  text-align: center;
+  margin-bottom: 20px;
+  z-index: 10;
+  animation: glow 2s ease-in-out infinite alternate;
+}
+
+.game-title {
+  font-size: 3rem;
+  color: #00ffff;
+  text-shadow: 
+    0 0 10px #00ffff,
+    0 0 20px #00ffff,
+    0 0 30px #00ffff,
+    0 0 40px #00ffff;
+  margin-bottom: 10px;
+  letter-spacing: 5px;
+}
+
+.game-subtitle {
+  font-size: 0.8rem;
+  color: #ff00ff;
+  text-shadow: 
+    0 0 5px #ff00ff,
+    0 0 10px #ff00ff;
+  letter-spacing: 3px;
+}
+
+@keyframes glow {
+  from {
+    text-shadow: 
+      0 0 10px #00ffff,
+      0 0 20px #00ffff,
+      0 0 30px #00ffff;
+  }
+  to {
+    text-shadow: 
+      0 0 20px #00ffff,
+      0 0 30px #00ffff,
+      0 0 40px #00ffff,
+      0 0 50px #00ffff;
+  }
+}
+
+.game-wrapper {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+  z-index: 10;
+}
+
+.game-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 200px;
+}
+
+.game-stats {
+  background: rgba(0, 255, 255, 0.1);
+  border: 3px solid #00ffff;
+  border-radius: 0;
+  padding: 20px;
+  box-shadow: 
+    0 0 10px #00ffff,
+    inset 0 0 10px rgba(0, 255, 255, 0.2);
+}
+
+.stat-item {
+  margin-bottom: 15px;
+}
+
+.stat-item:last-child {
+  margin-bottom: 0;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: #00ffff;
+  text-shadow: 0 0 5px #00ffff;
+  margin-bottom: 5px;
+  letter-spacing: 2px;
+}
+
+.stat-value {
+  font-size: 1.2rem;
+  color: #ffff00;
+  text-shadow: 
+    0 0 5px #ffff00,
+    0 0 10px #ffff00;
+}
+
+.game-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.retro-button {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 0.7rem;
+  padding: 15px 20px;
+  background: #000;
+  color: #00ffff;
+  border: 3px solid #00ffff;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  transition: all 0.1s;
+  box-shadow: 
+    0 0 10px #00ffff,
+    inset 0 0 10px rgba(0, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.retro-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(0, 255, 255, 0.3),
+    transparent
+  );
+  transition: left 0.5s;
+}
+
+.retro-button:hover::before {
+  left: 100%;
+}
+
+.retro-button:hover {
+  background: rgba(0, 255, 255, 0.1);
+  box-shadow: 
+    0 0 20px #00ffff,
+    inset 0 0 20px rgba(0, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.retro-button:active {
+  transform: scale(0.95);
+  box-shadow: 
+    0 0 5px #00ffff,
+    inset 0 0 5px rgba(0, 255, 255, 0.3);
+}
+
+.game-instructions {
+  background: rgba(255, 0, 255, 0.1);
+  border: 3px solid #ff00ff;
+  border-radius: 0;
+  padding: 15px;
+  box-shadow: 
+    0 0 10px #ff00ff,
+    inset 0 0 10px rgba(255, 0, 255, 0.2);
+}
+
+.instruction-title {
+  font-size: 0.7rem;
+  color: #ff00ff;
+  text-shadow: 0 0 5px #ff00ff;
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+}
+
+.instruction-item {
+  font-size: 0.5rem;
+  color: #fff;
+  margin-bottom: 5px;
+  line-height: 1.6;
+}
+
+.game-board-container {
+  position: relative;
+  background: rgba(0, 0, 0, 0.8);
+  border: 4px solid #00ffff;
+  box-shadow: 
+    0 0 20px #00ffff,
+    inset 0 0 20px rgba(0, 255, 255, 0.1);
+  padding: 10px;
+}
+
+.game-board {
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  border: 2px solid #333;
+}
+
+.board-row {
+  display: flex;
+}
+
+.board-cell {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(0, 255, 255, 0.1);
+  background: #000;
+  transition: all 0.1s;
+}
+
+.board-cell.filled {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 0 5px currentColor,
+    inset 0 0 5px rgba(255, 255, 255, 0.2);
+  animation: blockPulse 0.3s ease-in-out;
+}
+
+@keyframes blockPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.game-over,
+.game-paused {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  border: 4px solid #ff0000;
+  box-shadow: 
+    0 0 30px #ff0000,
+    inset 0 0 30px rgba(255, 0, 0, 0.2);
+}
+
+.game-over-text,
+.game-paused-text {
+  font-size: 2rem;
+  color: #ff0000;
+  text-shadow: 
+    0 0 10px #ff0000,
+    0 0 20px #ff0000,
+    0 0 30px #ff0000;
+  margin-bottom: 30px;
+  animation: blink 1s infinite;
+  letter-spacing: 5px;
+}
+
+.game-paused-text {
+  color: #ffff00;
+  text-shadow: 
+    0 0 10px #ffff00,
+    0 0 20px #ffff00;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .game-wrapper {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .game-title {
+    font-size: 2rem;
+  }
+
+  .game-sidebar {
+    min-width: auto;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .board-cell {
+    width: 20px;
+    height: 20px;
+  }
+}
