@@ -29,6 +29,7 @@ body {
     linear-gradient(135deg, #000000 0%, #1a0033 50%, #000000 100%);
   position: relative;
   overflow: hidden;
+  padding: 20px;
 }
 
 /* Scanlines эффект */
@@ -58,7 +59,7 @@ body {
 }
 
 .game-title {
-  font-size: 3rem;
+  font-size: 2.5rem;
   color: #00ffff;
   text-shadow: 
     0 0 10px #00ffff,
@@ -105,7 +106,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  min-width: 200px;
+  min-width: 250px;
 }
 
 .game-stats {
@@ -201,6 +202,65 @@ body {
     inset 0 0 5px rgba(0, 255, 255, 0.3);
 }
 
+.next-blocks {
+  background: rgba(255, 0, 255, 0.1);
+  border: 3px solid #ff00ff;
+  border-radius: 0;
+  padding: 15px;
+  box-shadow: 
+    0 0 10px #ff00ff,
+    inset 0 0 10px rgba(255, 0, 255, 0.2);
+}
+
+.blocks-container {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.block-preview {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.block-preview:hover {
+  border-color: #00ffff;
+  box-shadow: 0 0 10px #00ffff;
+  transform: scale(1.05);
+}
+
+.block-preview.selected {
+  border-color: #ffff00;
+  box-shadow: 0 0 15px #ffff00;
+  background: rgba(255, 255, 0, 0.1);
+}
+
+.block-row {
+  display: flex;
+  gap: 2px;
+}
+
+.block-cell {
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+}
+
+.block-cell.filled {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 
+    0 0 5px currentColor,
+    inset 0 0 5px rgba(255, 255, 255, 0.2);
+}
+
 .game-instructions {
   background: rgba(255, 0, 255, 0.1);
   border: 3px solid #ff00ff;
@@ -248,19 +308,31 @@ body {
 }
 
 .board-cell {
-  width: 30px;
-  height: 30px;
-  border: 1px solid rgba(0, 255, 255, 0.1);
+  width: 50px;
+  height: 50px;
+  border: 1px solid rgba(0, 255, 255, 0.2);
   background: #000;
   transition: all 0.1s;
+  cursor: pointer;
+}
+
+.board-cell:hover {
+  background: rgba(0, 255, 255, 0.05);
+  border-color: rgba(0, 255, 255, 0.5);
 }
 
 .board-cell.filled {
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.5);
   box-shadow: 
-    0 0 5px currentColor,
-    inset 0 0 5px rgba(255, 255, 255, 0.2);
+    0 0 10px currentColor,
+    inset 0 0 10px rgba(255, 255, 255, 0.3);
   animation: blockPulse 0.3s ease-in-out;
+}
+
+.board-cell.preview {
+  border: 2px dashed #ffff00;
+  background: rgba(255, 255, 0, 0.2);
+  box-shadow: 0 0 10px #ffff00;
 }
 
 @keyframes blockPulse {
@@ -268,18 +340,17 @@ body {
     transform: scale(1);
   }
   50% {
-    transform: scale(1.1);
+    transform: scale(1.05);
   }
 }
 
-.game-over,
-.game-paused {
+.game-over {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(0, 0, 0, 0.95);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -291,24 +362,25 @@ body {
     inset 0 0 30px rgba(255, 0, 0, 0.2);
 }
 
-.game-over-text,
-.game-paused-text {
+.game-over-text {
   font-size: 2rem;
   color: #ff0000;
   text-shadow: 
     0 0 10px #ff0000,
     0 0 20px #ff0000,
     0 0 30px #ff0000;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   animation: blink 1s infinite;
   letter-spacing: 5px;
 }
 
-.game-paused-text {
+.game-over-score {
+  font-size: 1rem;
   color: #ffff00;
   text-shadow: 
-    0 0 10px #ffff00,
-    0 0 20px #ffff00;
+    0 0 5px #ffff00,
+    0 0 10px #ffff00;
+  margin-bottom: 30px;
 }
 
 @keyframes blink {
@@ -321,14 +393,14 @@ body {
 }
 
 /* Адаптивность */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .game-wrapper {
     flex-direction: column;
     align-items: center;
   }
 
   .game-title {
-    font-size: 2rem;
+    font-size: 1.5rem;
   }
 
   .game-sidebar {
@@ -338,7 +410,22 @@ body {
   }
 
   .board-cell {
-    width: 20px;
-    height: 20px;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 768px) {
+  .board-cell {
+    width: 30px;
+    height: 30px;
+  }
+
+  .game-title {
+    font-size: 1.2rem;
+  }
+
+  .game-subtitle {
+    font-size: 0.6rem;
   }
 }

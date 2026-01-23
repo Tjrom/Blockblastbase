@@ -3,19 +3,43 @@
 import { useState, useEffect, useCallback } from 'react'
 import './game.css'
 
-const BOARD_WIDTH = 10
-const BOARD_HEIGHT = 20
-const BLOCK_SIZE = 30
+const BOARD_SIZE = 8
 
-// Блоки для игры (разные формы)
-const BLOCKS = [
-  [[1, 1, 1, 1]], // I
-  [[1, 1], [1, 1]], // O
-  [[0, 1, 0], [1, 1, 1]], // T
-  [[0, 1, 1], [1, 1, 0]], // S
-  [[1, 1, 0], [0, 1, 1]], // Z
-  [[1, 0, 0], [1, 1, 1]], // L
-  [[0, 0, 1], [1, 1, 1]], // J
+// Различные формы блоков для размещения
+const BLOCK_SHAPES = [
+  // Одиночные блоки
+  [[1]],
+  // Двойные блоки
+  [[1, 1]],
+  [[1], [1]],
+  // Тройные блоки
+  [[1, 1, 1]],
+  [[1], [1], [1]],
+  [[1, 1], [1, 0]],
+  [[1, 1], [0, 1]],
+  [[0, 1], [1, 1]],
+  [[1, 0], [1, 1]],
+  // Четверные блоки
+  [[1, 1, 1, 1]],
+  [[1], [1], [1], [1]],
+  [[1, 1], [1, 1]],
+  [[1, 1, 1], [1, 0, 0]],
+  [[1, 1, 1], [0, 0, 1]],
+  [[1, 0, 0], [1, 1, 1]],
+  [[0, 0, 1], [1, 1, 1]],
+  [[1, 1], [1, 0], [1, 0]],
+  [[1, 1], [0, 1], [0, 1]],
+  [[1, 0], [1, 0], [1, 1]],
+  [[0, 1], [0, 1], [1, 1]],
+  // Пятерные блоки
+  [[1, 1, 1, 1, 1]],
+  [[1], [1], [1], [1], [1]],
+  [[1, 1, 1], [1, 1, 0]],
+  [[1, 1, 1], [0, 1, 1]],
+  [[1, 1, 0], [1, 1, 1]],
+  [[0, 1, 1], [1, 1, 1]],
+  [[1, 1, 1], [1, 0, 1]],
+  [[1, 0, 1], [1, 1, 1]],
 ]
 
 const COLORS = [
@@ -26,88 +50,81 @@ const COLORS = [
   '#ff0000', // Red
   '#ff8800', // Orange
   '#0000ff', // Blue
+  '#ff00ff', // Pink
 ]
 
-type Cell = number | null
+type Cell = string | null
 type Board = Cell[][]
+type Block = number[][]
 
 export default function Home() {
   const [board, setBoard] = useState<Board>([])
-  const [currentBlock, setCurrentBlock] = useState<number[][]>([])
-  const [currentX, setCurrentX] = useState(0)
-  const [currentY, setCurrentY] = useState(0)
-  const [currentColor, setCurrentColor] = useState('#00ffff')
+  const [nextBlocks, setNextBlocks] = useState<Block[]>([])
   const [score, setScore] = useState(0)
-  const [level, setLevel] = useState(1)
   const [lines, setLines] = useState(0)
   const [gameOver, setGameOver] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
   const [gameStarted, setGameStarted] = useState(false)
+  const [selectedBlock, setSelectedBlock] = useState<{ block: Block; index: number } | null>(null)
+  const [previewPosition, setPreviewPosition] = useState<{ row: number; col: number } | null>(null)
 
   // Инициализация пустой доски
   const initBoard = useCallback((): Board => {
-    return Array(BOARD_HEIGHT).fill(null).map(() => Array(BOARD_WIDTH).fill(null))
+    return Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null))
   }, [])
 
-  // Получить случайный блок
-  const getRandomBlock = useCallback(() => {
-    const blockIndex = Math.floor(Math.random() * BLOCKS.length)
-    return {
-      shape: BLOCKS[blockIndex],
-      color: COLORS[blockIndex],
+  // Получить случайные блоки
+  const getRandomBlocks = useCallback((): Block[] => {
+    const blocks: Block[] = []
+    for (let i = 0; i < 3; i++) {
+      const randomIndex = Math.floor(Math.random() * BLOCK_SHAPES.length)
+      blocks.push(BLOCK_SHAPES[randomIndex])
     }
+    return blocks
   }, [])
 
   // Инициализация игры
   const initGame = useCallback(() => {
     const newBoard = initBoard()
-    const { shape, color } = getRandomBlock()
+    const blocks = getRandomBlocks()
     setBoard(newBoard)
-    setCurrentBlock(shape)
-    setCurrentX(Math.floor(BOARD_WIDTH / 2) - Math.floor(shape[0].length / 2))
-    setCurrentY(0)
-    setCurrentColor(color)
+    setNextBlocks(blocks)
     setScore(0)
-    setLevel(1)
     setLines(0)
     setGameOver(false)
-    setIsPaused(false)
     setGameStarted(true)
-  }, [initBoard, getRandomBlock])
+    setSelectedBlock(null)
+    setPreviewPosition(null)
+  }, [initBoard, getRandomBlocks])
 
-  // Проверка коллизии
-  const checkCollision = useCallback((block: number[][], x: number, y: number, board: Board): boolean => {
-    for (let row = 0; row < block.length; row++) {
-      for (let col = 0; col < block[row].length; col++) {
-        if (block[row][col]) {
-          const newX = x + col
-          const newY = y + row
+  // Проверка, можно ли разместить блок
+  const canPlaceBlock = useCallback((block: Block, row: number, col: number, board: Board): boolean => {
+    for (let r = 0; r < block.length; r++) {
+      for (let c = 0; c < block[r].length; c++) {
+        if (block[r][c]) {
+          const boardRow = row + r
+          const boardCol = col + c
           
-          if (newX < 0 || newX >= BOARD_WIDTH || newY >= BOARD_HEIGHT) {
-            return true
+          if (boardRow < 0 || boardRow >= BOARD_SIZE || boardCol < 0 || boardCol >= BOARD_SIZE) {
+            return false
           }
           
-          if (newY >= 0 && board[newY][newX] !== null) {
-            return true
+          if (board[boardRow][boardCol] !== null) {
+            return false
           }
         }
       }
     }
-    return false
+    return true
   }, [])
 
   // Разместить блок на доске
-  const placeBlock = useCallback((block: number[][], x: number, y: number, color: string, board: Board): Board => {
-    const newBoard = board.map(row => [...row])
+  const placeBlock = useCallback((block: Block, row: number, col: number, color: string, board: Board): Board => {
+    const newBoard = board.map(r => [...r])
     
-    for (let row = 0; row < block.length; row++) {
-      for (let col = 0; col < block[row].length; col++) {
-        if (block[row][col]) {
-          const boardY = y + row
-          const boardX = x + col
-          if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
-            newBoard[boardY][boardX] = color as any
-          }
+    for (let r = 0; r < block.length; r++) {
+      for (let c = 0; c < block[r].length; c++) {
+        if (block[r][c]) {
+          newBoard[row + r][col + c] = color
         }
       }
     }
@@ -115,165 +132,144 @@ export default function Home() {
     return newBoard
   }, [])
 
-  // Удалить заполненные линии
-  const clearLines = useCallback((board: Board): { newBoard: Board; linesCleared: number } => {
+  // Удалить заполненные линии и столбцы
+  const clearLines = useCallback((board: Board): { newBoard: Board; cleared: number } => {
     let newBoard = board.map(row => [...row])
-    let linesCleared = 0
+    let cleared = 0
+    const rowsToClear: number[] = []
+    const colsToClear: number[] = []
     
-    for (let row = BOARD_HEIGHT - 1; row >= 0; row--) {
+    // Проверка строк
+    for (let row = 0; row < BOARD_SIZE; row++) {
       if (newBoard[row].every(cell => cell !== null)) {
-        newBoard.splice(row, 1)
-        newBoard.unshift(Array(BOARD_WIDTH).fill(null))
-        linesCleared++
-        row++ // Проверить эту же строку снова
+        rowsToClear.push(row)
       }
     }
     
-    return { newBoard, linesCleared }
+    // Проверка столбцов
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      let isFull = true
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        if (newBoard[row][col] === null) {
+          isFull = false
+          break
+        }
+      }
+      if (isFull) {
+        colsToClear.push(col)
+      }
+    }
+    
+    // Очистка строк
+    for (const row of rowsToClear) {
+      newBoard[row] = Array(BOARD_SIZE).fill(null)
+      cleared++
+    }
+    
+    // Очистка столбцов
+    for (const col of colsToClear) {
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        newBoard[row][col] = null
+      }
+      cleared++
+    }
+    
+    return { newBoard, cleared }
   }, [])
 
-  // Движение блока вниз
-  const moveDown = useCallback(() => {
-    if (gameOver || isPaused || !gameStarted) return
+  // Обработка клика по доске
+  const handleBoardClick = useCallback((row: number, col: number) => {
+    if (!selectedBlock || gameOver || !gameStarted) return
 
-    setBoard(prevBoard => {
-      if (checkCollision(currentBlock, currentX, currentY + 1, prevBoard)) {
-        // Блок не может двигаться вниз, размещаем его
-        const newBoard = placeBlock(currentBlock, currentX, currentY, currentColor, prevBoard)
-        const { newBoard: clearedBoard, linesCleared } = clearLines(newBoard)
-        
-        if (linesCleared > 0) {
-          setLines(prev => prev + linesCleared)
-          setScore(prev => prev + linesCleared * 100 * level)
-          setLevel(prev => Math.floor((prev + linesCleared) / 10) + 1)
-        }
-        
-        // Проверка на game over
-        if (checkCollision(currentBlock, currentX, currentY, clearedBoard)) {
-          setGameOver(true)
-          return clearedBoard
-        }
-        
-        // Новый блок
-        const { shape, color } = getRandomBlock()
-        setCurrentBlock(shape)
-        setCurrentX(Math.floor(BOARD_WIDTH / 2) - Math.floor(shape[0].length / 2))
-        setCurrentY(0)
-        setCurrentColor(color)
-        
-        return clearedBoard
-      } else {
-        setCurrentY(prev => prev + 1)
-        return prevBoard
-      }
-    })
-  }, [currentBlock, currentX, currentY, currentColor, gameOver, isPaused, gameStarted, checkCollision, placeBlock, clearLines, getRandomBlock, level])
-
-  // Движение влево
-  const moveLeft = useCallback(() => {
-    if (gameOver || isPaused || !gameStarted) return
-
-    setBoard(prevBoard => {
-      if (!checkCollision(currentBlock, currentX - 1, currentY, prevBoard)) {
-        setCurrentX(prev => prev - 1)
-      }
-      return prevBoard
-    })
-  }, [currentBlock, currentX, currentY, gameOver, isPaused, gameStarted, checkCollision])
-
-  // Движение вправо
-  const moveRight = useCallback(() => {
-    if (gameOver || isPaused || !gameStarted) return
-
-    setBoard(prevBoard => {
-      if (!checkCollision(currentBlock, currentX + 1, currentY, prevBoard)) {
-        setCurrentX(prev => prev + 1)
-      }
-      return prevBoard
-    })
-  }, [currentBlock, currentX, currentY, gameOver, isPaused, gameStarted, checkCollision])
-
-  // Поворот блока
-  const rotateBlock = useCallback(() => {
-    if (gameOver || isPaused || !gameStarted) return
-
-    const rotated = currentBlock[0].map((_, i) =>
-      currentBlock.map(row => row[i]).reverse()
-    )
+    const { block } = selectedBlock
     
-    setBoard(prevBoard => {
-      if (!checkCollision(rotated, currentX, currentY, prevBoard)) {
-        setCurrentBlock(rotated)
-      }
-      return prevBoard
-    })
-  }, [currentBlock, currentX, currentY, gameOver, isPaused, gameStarted, checkCollision])
-
-  // Обработка клавиатуры
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (!gameStarted) return
+    if (canPlaceBlock(block, row, col, board)) {
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)]
+      const newBoard = placeBlock(block, row, col, color, board)
+      const { newBoard: clearedBoard, cleared } = clearLines(newBoard)
       
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault()
-          moveLeft()
-          break
-        case 'ArrowRight':
-          e.preventDefault()
-          moveRight()
-          break
-        case 'ArrowDown':
-          e.preventDefault()
-          moveDown()
-          break
-        case 'ArrowUp':
-        case ' ':
-          e.preventDefault()
-          rotateBlock()
-          break
-        case 'p':
-        case 'P':
-          e.preventDefault()
-          setIsPaused(prev => !prev)
-          break
+      if (cleared > 0) {
+        setLines(prev => prev + cleared)
+        setScore(prev => prev + cleared * 10)
+      }
+      
+      // Удаляем использованный блок и добавляем новый
+      const newNextBlocks = [...nextBlocks]
+      newNextBlocks.splice(selectedBlock.index, 1)
+      
+      // Добавляем новый блок если осталось меньше 3
+      if (newNextBlocks.length < 3) {
+        const randomIndex = Math.floor(Math.random() * BLOCK_SHAPES.length)
+        newNextBlocks.push(BLOCK_SHAPES[randomIndex])
+      }
+      
+      setNextBlocks(newNextBlocks)
+      setBoard(clearedBoard)
+      setSelectedBlock(null)
+      setPreviewPosition(null)
+      
+      // Проверка на game over
+      const canPlaceAny = newNextBlocks.some(block => {
+        for (let r = 0; r < BOARD_SIZE; r++) {
+          for (let c = 0; c < BOARD_SIZE; c++) {
+            if (canPlaceBlock(block, r, c, clearedBoard)) {
+              return true
+            }
+          }
+        }
+        return false
+      })
+      
+      if (!canPlaceAny) {
+        setGameOver(true)
       }
     }
+  }, [selectedBlock, board, nextBlocks, gameOver, gameStarted, canPlaceBlock, placeBlock, clearLines])
 
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [gameStarted, moveLeft, moveRight, moveDown, rotateBlock])
+  // Обработка наведения на доску
+  const handleBoardHover = useCallback((row: number, col: number) => {
+    if (!selectedBlock || gameOver || !gameStarted) {
+      setPreviewPosition(null)
+      return
+    }
 
-  // Автоматическое движение вниз
-  useEffect(() => {
-    if (gameOver || isPaused || !gameStarted) return
+    const { block } = selectedBlock
+    
+    if (canPlaceBlock(block, row, col, board)) {
+      setPreviewPosition({ row, col })
+    } else {
+      setPreviewPosition(null)
+    }
+  }, [selectedBlock, board, gameOver, gameStarted, canPlaceBlock])
 
-    const interval = Math.max(100, 1000 - (level - 1) * 50)
-    const timer = setInterval(() => {
-      moveDown()
-    }, interval)
-
-    return () => clearInterval(timer)
-  }, [gameOver, isPaused, gameStarted, level, moveDown])
+  // Выбор блока
+  const handleBlockSelect = useCallback((block: Block, index: number) => {
+    if (gameOver || !gameStarted) return
+    setSelectedBlock({ block, index })
+  }, [gameOver, gameStarted])
 
   // Инициализация при загрузке
   useEffect(() => {
     setBoard(initBoard())
-  }, [initBoard])
+    setNextBlocks(getRandomBlocks())
+  }, [initBoard, getRandomBlocks])
 
-  // Рендер доски с текущим блоком
+  // Рендер доски с превью
   const renderBoard = () => {
     const displayBoard = board.map(row => [...row])
     
-    // Добавляем текущий блок на доску для отображения
-    if (gameStarted && !gameOver) {
-      for (let row = 0; row < currentBlock.length; row++) {
-        for (let col = 0; col < currentBlock[row].length; col++) {
-          if (currentBlock[row][col]) {
-            const boardY = currentY + row
-            const boardX = currentX + col
-            if (boardY >= 0 && boardY < BOARD_HEIGHT && boardX >= 0 && boardX < BOARD_WIDTH) {
-              displayBoard[boardY][boardX] = currentColor as any
+    // Добавляем превью блока
+    if (selectedBlock && previewPosition) {
+      const { block } = selectedBlock
+      const { row, col } = previewPosition
+      
+      for (let r = 0; r < block.length; r++) {
+        for (let c = 0; c < block[r].length; c++) {
+          if (block[r][c]) {
+            const boardRow = row + r
+            const boardCol = col + c
+            if (boardRow >= 0 && boardRow < BOARD_SIZE && boardCol >= 0 && boardCol < BOARD_SIZE) {
+              displayBoard[boardRow][boardCol] = 'preview'
             }
           }
         }
@@ -289,7 +285,7 @@ export default function Home() {
     <div className="game-container">
       <div className="game-header">
         <h1 className="game-title">🎮 BLOCK BLAST</h1>
-        <p className="game-subtitle">RETRO ARCADE 1980s</p>
+        <p className="game-subtitle">RETRO ARCADE PUZZLE</p>
       </div>
 
       <div className="game-wrapper">
@@ -298,10 +294,6 @@ export default function Home() {
             <div className="stat-item">
               <div className="stat-label">SCORE</div>
               <div className="stat-value">{score.toLocaleString()}</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-label">LEVEL</div>
-              <div className="stat-value">{level}</div>
             </div>
             <div className="stat-item">
               <div className="stat-label">LINES</div>
@@ -315,23 +307,43 @@ export default function Home() {
                 START GAME
               </button>
             ) : (
-              <>
-                <button className="retro-button" onClick={() => setIsPaused(prev => !prev)}>
-                  {isPaused ? 'RESUME' : 'PAUSE'}
-                </button>
-                <button className="retro-button" onClick={initGame}>
-                  RESTART
-                </button>
-              </>
+              <button className="retro-button" onClick={initGame}>
+                NEW GAME
+              </button>
             )}
           </div>
 
+          <div className="next-blocks">
+            <div className="instruction-title">NEXT BLOCKS</div>
+            <div className="blocks-container">
+              {nextBlocks.map((block, index) => (
+                <div
+                  key={index}
+                  className={`block-preview ${selectedBlock?.index === index ? 'selected' : ''}`}
+                  onClick={() => handleBlockSelect(block, index)}
+                >
+                  {block.map((row, rowIndex) => (
+                    <div key={rowIndex} className="block-row">
+                      {row.map((cell, colIndex) => (
+                        <div
+                          key={colIndex}
+                          className={`block-cell ${cell ? 'filled' : ''}`}
+                          style={cell ? { backgroundColor: COLORS[index % COLORS.length] } : {}}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="game-instructions">
-            <div className="instruction-title">CONTROLS</div>
-            <div className="instruction-item">← → Move</div>
-            <div className="instruction-item">↓ Drop</div>
-            <div className="instruction-item">↑ / Space Rotate</div>
-            <div className="instruction-item">P Pause</div>
+            <div className="instruction-title">HOW TO PLAY</div>
+            <div className="instruction-item">1. Click a block</div>
+            <div className="instruction-item">2. Place it on board</div>
+            <div className="instruction-item">3. Fill lines/columns</div>
+            <div className="instruction-item">4. Clear & score!</div>
           </div>
         </div>
 
@@ -339,14 +351,10 @@ export default function Home() {
           {gameOver && (
             <div className="game-over">
               <div className="game-over-text">GAME OVER</div>
+              <div className="game-over-score">Final Score: {score}</div>
               <button className="retro-button" onClick={initGame}>
                 PLAY AGAIN
               </button>
-            </div>
-          )}
-          {isPaused && (
-            <div className="game-paused">
-              <div className="game-paused-text">PAUSED</div>
             </div>
           )}
           <div className="game-board">
@@ -355,8 +363,10 @@ export default function Home() {
                 {row.map((cell, colIndex) => (
                   <div
                     key={`${rowIndex}-${colIndex}`}
-                    className={`board-cell ${cell ? 'filled' : ''}`}
-                    style={cell ? { backgroundColor: String(cell) } : {}}
+                    className={`board-cell ${cell ? (cell === 'preview' ? 'preview' : 'filled') : ''}`}
+                    style={cell && cell !== 'preview' ? { backgroundColor: String(cell) } : {}}
+                    onClick={() => handleBoardClick(rowIndex, colIndex)}
+                    onMouseEnter={() => handleBoardHover(rowIndex, colIndex)}
                   />
                 ))}
               </div>
