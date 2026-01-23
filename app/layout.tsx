@@ -3,8 +3,8 @@ import './globals.css'
 import BaseVerification from './BaseVerification'
 
 export const metadata: Metadata = {
-  title: 'BlockBlast - Base Dev',
-  description: 'Смарт-контракт для Base Dev',
+  title: 'Block Blast - Retro Arcade Game',
+  description: 'Retro arcade game in 80s style for Base Dev',
   other: {
     'base:app_id': '6971069c5f24b57cc50d333c',
   },
@@ -16,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="ru">
+    <html lang="en">
       <head>
         <meta name="base:app_id" content="6971069c5f24b57cc50d333c" />
       </head>
